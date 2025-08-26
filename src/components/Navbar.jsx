@@ -75,6 +75,12 @@ const Navbar = () => {
           module: 'clients'
         },
         {
+          name: 'Operadores',
+          path: '/parametrizacion/operadores',
+          icon: Briefcase,
+          module: MODULES.OPERATORS
+        },
+        {
           name: 'Proveedores',
           path: '/parametrizacion/proveedores',
           icon: Briefcase,

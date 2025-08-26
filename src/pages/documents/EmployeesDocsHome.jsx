@@ -12,6 +12,8 @@ export default function EmployeesDocsHome() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [view, setView] = useState('grid'); // 'grid' | 'list'
+  const [laundries, setLaundries] = useState([]);
+  const [centerId, setCenterId] = useState('');
   const [cedula, setCedula] = useState('');
 
   useEffect(() => {
@@ -20,6 +22,7 @@ export default function EmployeesDocsHome() {
       setError(null);
       try {
         const query = { estado: 'Activo' };
+        if (centerId) query['lavanderia.id'] = centerId;
         const { data } = await fetchEmployees({ limit: 200, offset: 1, query });
         setEmployees(Array.isArray(data) ? data : []);
       } catch (e) {
@@ -29,9 +32,19 @@ export default function EmployeesDocsHome() {
       }
     };
     load();
-  }, []);
+  }, [centerId]);
 
-  
+  useEffect(() => {
+    const loadLaundries = async () => {
+      try {
+        // TODO: connect to laundries service when available
+        setLaundries([]);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    loadLaundries();
+  }, []);
 
   
 
@@ -81,8 +94,21 @@ export default function EmployeesDocsHome() {
         </div>
       </div>
 
-      {/* Filtro por cédula */}
+      {/* Filtros */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div>
+          <label className="text-xs text-muted-foreground">Centro de Lavado</label>
+          <select
+            className="mt-1 w-full h-9 rounded-md border bg-background px-3 text-sm"
+            value={centerId}
+            onChange={e => setCenterId(e.target.value)}
+          >
+            <option value="">Todos</option>
+            {laundries.map(l => (
+              <option key={l._id || l.id} value={l._id || l.id}>{l.nombre || l.name}</option>
+            ))}
+          </select>
+        </div>
         <div>
           <label className="text-xs text-muted-foreground">Cédula</label>
           <Input

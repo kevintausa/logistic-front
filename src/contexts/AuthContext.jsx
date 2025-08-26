@@ -24,6 +24,7 @@ export const MODULES = {
   PROVIDERS: 'providers',
   DOCUMENTATION: 'documentation',
   EMPLOYEES: 'employees',
+  OPERATORS: 'operators',
 };
 
 // Permisos por rol
@@ -34,6 +35,8 @@ const ROLE_PERMISSIONS = {
     MODULES.CLIENTS,
     MODULES.PROVIDERS,
     MODULES.DOCUMENT_TYPES,
+    MODULES.USERS,
+    MODULES.OPERATORS,
   ],
   [ROLES.EMPLOYEE]: [
     MODULES.DASHBOARD,

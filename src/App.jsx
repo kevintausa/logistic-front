@@ -4,6 +4,7 @@ import Layout from '@/components/Layout';
 import DashboardPage from '@/pages/DashboardPage';
 import ProvidersPage from '@/pages/parametrizacion/providers/ProvidersPage';
 import ClientsParametrizationPage from '@/pages/parametrizacion/clients/ClientsPage';
+import OperatorsPage from '@/pages/parametrizacion/operators/OperatorsPage';
 import LoginPage from '@/pages/LoginPage';
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import UsuariosPage from '@/pages/parametrizacion/usuarios/UsuariosPage';
@@ -78,6 +79,11 @@ function AppContent() {
         <Route path="/parametrizacion/clientes" element={
           <ProtectedRoute requiredModule="clients">
             <ClientsParametrizationPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/parametrizacion/operadores" element={
+          <ProtectedRoute requiredModule="operators">
+            <OperatorsPage />
           </ProtectedRoute>
         } />
         

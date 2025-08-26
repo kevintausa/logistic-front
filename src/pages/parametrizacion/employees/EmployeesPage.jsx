@@ -201,6 +201,19 @@ const EmployeesPage = () => {
                     { value: 'Inactivo', label: 'Inactivo' },
                   ]},
                   { id: 'createdAt', label: 'Rango de fechas', type: 'daterange' },
+                  { id: 'lavanderia.id', label: 'Centro de Lavado', type: 'asyncSelect',
+                    fetchOptions: async () => {
+                      try {
+                        const { fetchLaundries } = await import('@/pages/parametrizacion/laundries/Services/laundries.services.jsx');
+                        const response = await fetchLaundries({ limit: 100, offset: 1, query: { estado: 'Activo' } });
+                        const arr = Array.isArray(response?.data) ? response.data : [];
+                        return arr.map(laundry => ({ value: laundry._id, label: laundry.nombre }));
+                      } catch (e) {
+                        console.error('Error loading laundries:', e);
+                        return [];
+                      }
+                    }
+                  },
                 ]}
                 onRemoveFilter={handleRemoveFilter}
               />
@@ -229,6 +242,7 @@ const EmployeesPage = () => {
                 ]
               },
               { id: 'createdAt', label: 'Rango de fechas', type: 'daterange', defaultToday: true },
+            
             ]}
             initialFilters={filters}
             onChange={handleFilterChange}

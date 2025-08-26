@@ -5,7 +5,6 @@ import AppliedFilters from '@/components/AppliedFilters';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import DataTable from '@/components/DataTable';
-import Pagination from '@/components/Pagination';
 import DynamicFormModal from '@/components/DynamicFormModal';
 import { useToast } from '@/components/ui/use-toast';
 import { clientsColumns, columnsExcel } from '@/pages/parametrizacion/clients/utils/clientsColumns';
@@ -230,6 +229,7 @@ const ClientsPage = () => {
                 ]
               },
               { id: 'createdAt', label: 'Rango de fechas', type: 'daterange', defaultToday: true },
+              
             ]}
             initialFilters={filters}
             onChange={handleFilterChange}
