@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { Folder, Building2, Shield, FileText, Wrench, LayoutGrid, List } from 'lucide-react';
-import { fetchLaundries } from '@/pages/parametrizacion/laundries/Services/laundries.services';
 import StorageUsageIndicator from '@/components/documents/StorageUsageIndicator';
 import { Button } from '@/components/ui/button';
 
@@ -19,19 +18,9 @@ export default function CentersDocsHome() {
       if (saved === 'grid' || saved === 'list') setView(saved);
     } catch {}
 
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { data } = await fetchLaundries({ limit: 100, offset: 1, query: {} });
-        setWorkplaces(Array.isArray(data) ? data : []);
-      } catch (e) {
-        setError(e?.message || 'No se pudo cargar la lista de centros');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    // Laundries feature removed: no fetch. Keep UI without data.
+    setLoading(false);
+    setWorkplaces([]);
   }, []);
 
   useEffect(() => {

@@ -42,28 +42,7 @@ const UsuariosPage = () => {
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [laundryOptions, setLaundryOptions] = useState([]);
-
-  // Opciones de filtros: normalizamos a { value: id, label }
-  const laundryOptionsFilter = useMemo(() => (
-    (laundryOptions || []).map(opt => ({ value: opt?.value?.id, label: opt?.label }))
-  ), [laundryOptions]);
-
-  // Prefetch opciones de lavanderías al montar la página
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { fetchLaundries } = await import('@/pages/parametrizacion/laundries/Services/laundries.services');
-        const r = await fetchLaundries({ limit: 200, offset: 1, query: { estado: 'Activo' } });
-        const opts = (r.data || []).map(l => ({ value: { id: l._id, nombre: l.nombre }, label: l.nombre }));
-        if (!cancelled) setLaundryOptions(opts);
-      } catch (e) {
-        console.error('Error precargando lavanderías', e);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  
 
   const fetchAndSetUsers = useCallback(async () => {
     setIsLoading(true);
@@ -153,10 +132,9 @@ const UsuariosPage = () => {
     [
       usersColumns.find((f) => f.id === 'estado'),
       { id: 'createdAt', label: 'Rango de fechas', type: 'daterange', defaultToday: true },
-      { id: 'lavanderia.id', label: 'Centro de Lavado', type: 'select', options: laundryOptionsFilter },
       // Puedes añadir más filtros (rol) si el backend lo soporta
     ].filter(Boolean)
-  ), [laundryOptionsFilter]);
+  ), []);
 
   const columns = [
     { id: 'estado', label: 'Estado', type: 'status' },
@@ -235,7 +213,7 @@ const UsuariosPage = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSave={handleSaveItem}
-        fields={usersColumns.map(f => f.id === 'lavanderia' ? { ...f, options: laundryOptions } : f)}
+        fields={usersColumns}
         item={currentItem}
         title={modalMode === 'create' ? 'Crear Usuario' : 'Editar Usuario'}
       />

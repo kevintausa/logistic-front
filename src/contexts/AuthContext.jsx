@@ -18,24 +18,12 @@ export const ROLES = {
 // Módulos de la aplicación
 export const MODULES = {
   DASHBOARD: 'dashboard',
-  WORKPLACES: 'workplaces',
-  CLIENTS: 'clients',
-  EMPLOYEES: 'employees',
-  GARMENT_TYPES: 'garment_types',
-  WASHING_PROGRAMS: 'washing_programs',
-  MACHINES: 'machines',
-  REPORTS: 'reports',
-  SETTINGS: 'settings',
   USERS: 'users',
-  LAUNDRIES: 'laundries',
-  RECEPTION: 'reception',
-  PRODUCTS: 'products',
-  SERVICE: 'services',
-  PROVIDERS: 'providers',
-  OPERARIO: 'operario',
   DOCUMENT_TYPES: 'document_types',
+  CLIENTS: 'clients',
+  PROVIDERS: 'providers',
   DOCUMENTATION: 'documentation',
-  LAUNDRIES_CENTERS: 'laundries_centers'
+  EMPLOYEES: 'employees',
 };
 
 // Permisos por rol
@@ -43,34 +31,28 @@ const ROLE_PERMISSIONS = {
   [ROLES.ADMIN]: Object.values(MODULES),
   [ROLES.SUPERVISOR]: [
     MODULES.DASHBOARD,
-    MODULES.EMPLOYEES,
     MODULES.CLIENTS,
-    MODULES.WORKPLACES,
-    MODULES.REPORTS,
-    MODULES.RECEPTION
+    MODULES.PROVIDERS,
+    MODULES.DOCUMENT_TYPES,
   ],
   [ROLES.EMPLOYEE]: [
     MODULES.DASHBOARD,
-    MODULES.OPERARIO,
   ],
   [ROLES.CLIENT]: [
-    MODULES.DASHBOARD
-
+    MODULES.DASHBOARD,
   ],
   [ROLES.LAUNDRY]: [
-    MODULES.DASHBOARD
+    MODULES.DASHBOARD,
   ],
   [ROLES.CENTRO_LAVADO]: [
     MODULES.DASHBOARD,
-    MODULES.WORKPLACES,
-    MODULES.REPORTS
   ],
   [ROLES.DOCUMENTATION]: [
     MODULES.DASHBOARD,
     MODULES.DOCUMENTATION,
     MODULES.EMPLOYEES,
-    MODULES.DOCUMENT_TYPES
-  ]
+    MODULES.DOCUMENT_TYPES,
+  ],
 };
 
 // Solo los administradores pueden gestionar usuarios

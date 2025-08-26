@@ -29,22 +29,7 @@ export const usersColumns = [
       { value: 'documentacion', label: 'Documentación' },
     ],
   },
-  {
-    id: 'lavanderia',
-    label: 'Centro de Lavado',
-    type: 'asyncSelect',
-    required: true,
-    fetchOptions: async () => {
-      try {
-        const { fetchLaundries } = await import('@/pages/parametrizacion/laundries/Services/laundries.services');
-        const r = await fetchLaundries({ limit: 100, offset: 1, query: { estado: 'Activo' } });
-        return (r.data || []).map((l) => ({ value: { id: l._id, nombre: l.nombre }, label: l.nombre }));
-      } catch (e) {
-        console.error('Error cargando opciones de lavandería', e);
-        return [];
-      }
-    },
-  },
+  { id: 'lavanderia', label: 'Centro de Lavado', type: 'text', required: false },
 ];
 
 export const columnsExcel = [

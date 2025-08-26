@@ -44,28 +44,10 @@ const Navbar = () => {
       module: MODULES.DASHBOARD
     },
     {
-      name: 'Reportes',
-      path: '/reportes',
-      icon: <Book className="h-5 w-5" />,
-      module: MODULES.REPORTS
-    },
-    {
       name: 'Documentación',
       path: '/documentacion',
       icon: <FileText className="h-5 w-5" />,
       module: MODULES.DOCUMENTATION
-    },
-    {
-      name: 'Operario',
-      path: '/operario-dashboard',
-      icon: <Briefcase className="h-5 w-5" />,
-      module: MODULES.OPERARIO
-    },
-    {
-      name: 'Centros de Lavado',
-      path: '/centros-lavado',
-      icon: <Building2 className="h-5 w-5" />,
-      module: MODULES.WORKPLACES
     },
 
     {
@@ -75,10 +57,10 @@ const Navbar = () => {
       module: 'settings',
       subLinks: [
         {
-          name: 'Empleados',
-          path: '/parametrizacion/empleados',
-          icon: Users,
-          module: MODULES.EMPLOYEES
+          name: 'Usuarios',
+          path: '/parametrizacion/usuarios',
+          icon: UserCog,
+          module: 'users'
         },
         {
           name: 'Tipos de Archivo',
@@ -87,59 +69,16 @@ const Navbar = () => {
           module: MODULES.DOCUMENT_TYPES
         },
         {
-          name: 'Productos',
-          path: '/parametrizacion/productos',
-          icon: PackageSearch,
-          module: MODULES.PRODUCTS
-        },
-        {
-          name: 'Centros de Lavando',
-          path: '/parametrizacion/centros-lavado',
-          icon: Building2,
-          module: MODULES.LAUNDRIES_CENTERS
-        },
-        {
-          name: 'Lavadoras',
-          path: '/parametrizacion/lavadoras',
-          icon: Cog,
-          module: 'machines'
-        },
-        {
-          name: 'Tipos de Prenda',
-          path: '/parametrizacion/tipos-prenda',
-          icon: Shirt,
-          module: MODULES.GARMENT_TYPES
-        },
-        {
-          name: 'Programas de Lavado',
-          path: '/parametrizacion/programas-lavado',
-          icon: Book,
-          module: 'washing_programs'
-        },
-
-        {
           name: 'Clientes',
           path: '/parametrizacion/clientes',
           icon: User2,
           module: 'clients'
         },
         {
-          name: 'Servicios',
-          path: '/parametrizacion/servicios',
-          icon: Zap,
-          module: 'services'
-        },
-        {
           name: 'Proveedores',
           path: '/parametrizacion/proveedores',
           icon: Briefcase,
           module: MODULES.PROVIDERS
-        },
-        {
-          name: 'Usuarios',
-          path: '/parametrizacion/usuarios',
-          icon: UserCog,
-          module: 'users'
         },
       ].filter(item => hasPermission(item.module))
     },

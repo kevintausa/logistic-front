@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { Folder, Users, FileBadge2, ShieldCheck, FileText, LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { fetchEmployees } from '@/pages/parametrizacion/employees/Services/employees.services';
-import { fetchLaundries } from '@/pages/parametrizacion/laundries/Services/laundries.services';
 import { Input } from '@/components/ui/input';
 import StorageUsageIndicator from '@/components/documents/StorageUsageIndicator';
 
@@ -13,8 +12,6 @@ export default function EmployeesDocsHome() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [view, setView] = useState('grid'); // 'grid' | 'list'
-  const [laundries, setLaundries] = useState([]);
-  const [centerId, setCenterId] = useState('');
   const [cedula, setCedula] = useState('');
 
   useEffect(() => {
@@ -23,7 +20,6 @@ export default function EmployeesDocsHome() {
       setError(null);
       try {
         const query = { estado: 'Activo' };
-        if (centerId) query['lavanderia.id'] = centerId;
         const { data } = await fetchEmployees({ limit: 200, offset: 1, query });
         setEmployees(Array.isArray(data) ? data : []);
       } catch (e) {
@@ -33,19 +29,9 @@ export default function EmployeesDocsHome() {
       }
     };
     load();
-  }, [centerId]);
-
-  useEffect(() => {
-    const loadLaundries = async () => {
-      try {
-        const { data } = await fetchLaundries({ limit: 100, offset: 1, query: {} });
-        setLaundries(Array.isArray(data) ? data : []);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    loadLaundries();
   }, []);
+
+  
 
   
 
@@ -95,21 +81,8 @@ export default function EmployeesDocsHome() {
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Filtro por cédula */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        <div>
-          <label className="text-xs text-muted-foreground">Centro de Lavado</label>
-          <select
-            className="mt-1 w-full h-9 rounded-md border bg-background px-3 text-sm"
-            value={centerId}
-            onChange={e => setCenterId(e.target.value)}
-          >
-            <option value="">Todos</option>
-            {laundries.map(l => (
-              <option key={l._id || l.id} value={l._id || l.id}>{l.nombre || l.name}</option>
-            ))}
-          </select>
-        </div>
         <div>
           <label className="text-xs text-muted-foreground">Cédula</label>
           <Input

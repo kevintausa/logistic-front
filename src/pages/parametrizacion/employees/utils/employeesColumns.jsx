@@ -5,27 +5,7 @@ export const employeesColumns = [
       { value: 'Inactivo', label: 'Inactivo' },
     ]
   },
-  {
-    id: 'lavanderia', label: 'Centro de Lavado', type: 'asyncSelect', sortable: true, required: true, 
-    fetchOptions: async () => {
-      try {
-        // Importamos dinámicamente para evitar problemas de importación circular
-        const { fetchLaundries } = await import('@/pages/parametrizacion/laundries/Services/laundries.services');
-        const response = await fetchLaundries({ limit: 100, offset: 1, query: { estado: 'Activo' } });
-        
-        if (response && response.data) {
-          return response.data.map(laundry => ({
-            value: { id: laundry._id, nombre: laundry.nombre },
-            label: laundry.nombre
-          }));
-        }
-        return [];
-      } catch (error) {
-        console.error('Error cargando centros de lavado:', error);
-        return [];
-      }
-    }
-  },
+  { id: 'lavanderia', label: 'Centro de Lavado', type: 'text', sortable: true, required: false },
   { id: 'cedula', label: 'Cédula', type: 'text', sortable: true, required: true },
   { id: 'nombre', label: 'Nombre', type: 'text', sortable: true, required: true },
   { id: 'apellido', label: 'Apellido', type: 'text', sortable: true, required: true },

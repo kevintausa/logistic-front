@@ -7,14 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import StorageUsageIndicator from '@/components/documents/StorageUsageIndicator';
-import { fetchLaundryById } from '@/pages/parametrizacion/laundries/Services/laundries.services';
 
 export default function LaundryCenterDocumentsPage() {
   const { idLavanderia } = useParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [center, setCenter] = useState(null);
-  const [loadingCenter, setLoadingCenter] = useState(false);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -33,21 +30,7 @@ export default function LaundryCenterDocumentsPage() {
     if (idLavanderia) load();
   }, [idLavanderia]);
 
-  useEffect(() => {
-    const loadCenter = async () => {
-      if (!idLavanderia) return;
-      setLoadingCenter(true);
-      try {
-        const data = await fetchLaundryById(idLavanderia);
-        setCenter(data || null);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoadingCenter(false);
-      }
-    };
-    loadCenter();
-  }, [idLavanderia]);
+  // Laundries module removed: no center details fetch
 
   const handleUploaded = () => load();
   const handleDownload = async (id) => {
@@ -100,18 +83,7 @@ export default function LaundryCenterDocumentsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Documentos del Centro de Lavado</CardTitle>
-          <div className="mt-1 text-sm text-muted-foreground">
-            {loadingCenter ? (
-              <span>Cargando información del centro...</span>
-            ) : center ? (
-              <span>
-                <span className="font-medium text-foreground">{center.nombre || center.name}</span>
-                {center.direccion || center.address ? ` · ${center.direccion || center.address}` : ''}
-              </span>
-            ) : (
-              <span>No se encontró información del centro.</span>
-            )}
-          </div>
+          <div className="mt-1 text-sm text-muted-foreground">Gestión de archivos por centro</div>
           <StorageUsageIndicator className="mt-3" />
         </CardHeader>
         <CardContent>
