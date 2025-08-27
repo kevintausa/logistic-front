@@ -101,10 +101,13 @@ const QuoteModal = ({ isOpen, onClose, onSave, operation }) => {
   const handleSubmit = () => {
     // minimal validation
     if (!form.providerId) return; // Could show a toast outside
+    const prov = providers.find(p => (p._id || p.id) === form.providerId);
     const payload = {
       ...form,
       totalUsd: total,
       operationId: operation?._id,
+      provider: prov ? { id: String(prov._id || prov.id), nombre: prov.nombre || prov.name, correo: prov.correo } : undefined,
+      providerNombre: prov?.nombre || prov?.name,
     };
     onSave && onSave(payload);
   };

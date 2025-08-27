@@ -8,6 +8,14 @@ export const fetchOperations = async ({ limit = 10, offset = 1, query = {} }) =>
   return await res.json();
 };
 
+export const selectOperationQuote = async (operationId, quoteId) => {
+  const res = await fetch(`${API_URL}/operations/${operationId}/select-quote`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quoteId })
+  });
+  if (!res.ok) throw new Error('Error al seleccionar cotización');
+  return await res.json();
+};
+
 export const createOperation = async (payload) => {
   const res = await fetch(`${API_URL}/operations/create`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)

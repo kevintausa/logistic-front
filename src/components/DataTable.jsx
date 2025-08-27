@@ -115,21 +115,28 @@ const DataTable = ({ data, columns, isLoading, onAction, page, limit, totalRecor
                         // Permitir 'key' o 'id' como identificador de acción
                         const actionKey = action.key || action.id;
                         
+                        const isDisabled = typeof action.disabledWhen === 'function' ? !!action.disabledWhen(row) : false;
+                        const handleClick = () => {
+                          if (isDisabled) return;
+                          onAction && onAction(actionKey, row);
+                        };
                         return (
                           <TooltipProvider key={actionKey}>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
-                                  onClick={() => onAction && onAction(actionKey, row)}
+                                  onClick={handleClick}
                                   variant="ghost"
                                   size="icon"
-                                  className={`h-8 w-8 transition-colors hover:bg-black hover:text-white ${action.className || ''}`}
+                                  disabled={isDisabled}
+                                  aria-disabled={isDisabled}
+                                  className={`h-8 w-8 transition-colors ${isDisabled ? 'opacity-40 cursor-not-allowed hover:bg-transparent hover:text-inherit' : 'hover:bg-black hover:text-white'} ${action.className || ''}`}
                                 >
                                   <Icon className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <span>{action.tooltip || action.label || ''}</span>
+                                <span>{isDisabled ? (action.disabledTooltip || action.tooltip || action.label || '') : (action.tooltip || action.label || '')}</span>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>

@@ -10,14 +10,14 @@ export const operationsColumns = [
   { id: 'trazabilidadPct', label: 'Trazabilidad', accessor: (row) => `${row.trazabilidadPct ?? 0}%` },
   { id: 'actions', label: 'Acciones', type: 'actions', actions: [
     { key: 'view', label: 'Ver', icon: 'Eye', tooltip: 'Ver detalles', className: 'text-blue-600 hover:text-white hover:bg-blue-600' },
-    { key: 'addQuote', label: 'Agregar cotización', icon: 'Plus', tooltip: 'Agregar cotización', className: 'text-teal-600 hover:text-white hover:bg-teal-600' },
+    { key: 'addQuote', label: 'Agregar cotización', icon: 'Plus', tooltip: 'Agregar cotización', disabledTooltip: 'Solo disponible cuando la operación está Pendiente', className: 'text-teal-600 hover:text-white hover:bg-teal-600', disabledWhen: (row) => row.estado !== 'Pendiente' },
     { id: 'quotes', label: 'Cotizaciones', icon: 'FileText', tooltip: 'Gestionar cotizaciones', className: 'text-amber-600 hover:text-white hover:bg-amber-600' },
-    { id: 'offer', label: 'Oferta', icon: 'Tag', tooltip: 'Generar oferta', className: 'text-purple-600 hover:text-white hover:bg-purple-600' },
+    { id: 'offer', label: 'Oferta', icon: 'Tag', tooltip: 'Generar oferta', disabledTooltip: 'Primero selecciona una cotización', className: 'text-purple-600 hover:text-white hover:bg-purple-600', disabledWhen: (row) => !row.cotizacionSeleccionadaId },
     { id: 'status', label: 'Estatus', icon: 'ListChecks', tooltip: 'Ver estatus / trazabilidad', className: 'text-sky-600 hover:text-white hover:bg-sky-600' },
-    { id: 'close', label: 'Cerrar', icon: 'Lock', tooltip: 'Cerrar operación', className: 'text-emerald-600 hover:text-white hover:bg-emerald-600' },
-    { id: 'cancel', label: 'Cancelar', icon: 'Ban', tooltip: 'Cancelar operación', className: 'text-red-600 hover:text-white hover:bg-red-600' },
-    { id: 'edit', label: 'Editar', icon: 'Edit', tooltip: 'Editar operación', className: 'text-green-600 hover:text-white hover:bg-green-600' },
-    { id: 'delete', label: 'Eliminar', icon: 'Trash', tooltip: 'Eliminar operación', className: 'text-red-600 hover:text-white hover:bg-red-600' },
+    { id: 'close', label: 'Cerrar', icon: 'Lock', tooltip: 'Cerrar operación', disabledTooltip: 'Requiere una cotización seleccionada', className: 'text-emerald-600 hover:text-white hover:bg-emerald-600', disabledWhen: (row) => !row.cotizacionSeleccionadaId },
+    { id: 'cancel', label: 'Cancelar', icon: 'Ban', tooltip: 'Cancelar operación', disabledTooltip: 'No se puede cancelar una operación finalizada', className: 'text-red-600 hover:text-white hover:bg-red-600', disabledWhen: (row) => row.estado === 'Finalizada' },
+    { id: 'edit', label: 'Editar', icon: 'Edit', tooltip: 'Editar operación', disabledTooltip: 'Solo editable cuando la operación está Pendiente', className: 'text-green-600 hover:text-white hover:bg-green-600', disabledWhen: (row) => row.estado !== 'Pendiente' },
+    { id: 'delete', label: 'Eliminar', icon: 'Trash', tooltip: 'Eliminar operación', disabledTooltip: 'Solo se puede eliminar en estado Pendiente', className: 'text-red-600 hover:text-white hover:bg-red-600', disabledWhen: (row) => row.estado !== 'Pendiente' },
   ] },
 ];
 

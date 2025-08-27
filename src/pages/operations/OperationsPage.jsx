@@ -9,10 +9,14 @@ import FilterDrawer from '@/components/FilterDrawer';
 import { useToast } from '@/components/ui/use-toast';
 import { operationsColumns, columnsExcel } from './utils/operationsColumns';
 import ExportExcelButton from '@/components/ExportExcelButton';
-import { createOperation, deleteOperation, exportOperations, fetchOperations, updateOperation } from './Services/operations.services';
+import { createOperation, deleteOperation, exportOperations, fetchOperations, updateOperation, selectOperationQuote } from './Services/operations.services';
+import { createQuote } from './Services/quotes.services';
 import OperationModal from './components/OperationModal';
 import OperationDetailsModal from './components/OperationDetailsModal';
 import QuoteModal from './components/QuoteModal';
+import QuotesListModal from './components/QuotesListModal';
+import OfferBuilderModal from './components/OfferBuilderModal';
+import { getOfferByOperation, assembleOfferFromQuote, upsertOffer } from './Services/offers.services';
 
 const DEFAULT_FILTERS = {};
 
@@ -33,6 +37,11 @@ const OperationsPage = () => {
   const [detailsItem, setDetailsItem] = useState(null);
   const [isQuoteOpen, setIsQuoteOpen] = useState(false);
   const [quoteOperation, setQuoteOperation] = useState(null);
+  const [isQuotesListOpen, setIsQuotesListOpen] = useState(false);
+  const [quotesOperation, setQuotesOperation] = useState(null);
+  const [isOfferOpen, setIsOfferOpen] = useState(false);
+  const [offerOperation, setOfferOperation] = useState(null);
+  const [offerDraft, setOfferDraft] = useState(null);
 
   const fetchAndSet = useCallback(async () => {
     setIsLoading(true);
@@ -79,10 +88,22 @@ const OperationsPage = () => {
   };
 
   const handleSaveQuote = async (quoteData) => {
-    // TODO: Integrar con endpoint de cotizaciones cuando esté disponible
-    setIsQuoteOpen(false);
-    setQuoteOperation(null);
-    toast({ title: 'Cotización', description: 'Cotización guardada (temporal).', duration: 2500 });
+    try {
+      if (!quoteData?.providerId) {
+        toast({ title: 'Proveedor requerido', description: 'Selecciona un proveedor para guardar la cotización.', variant: 'destructive' });
+        return;
+      }
+      const resp = await createQuote(quoteData);
+      if (resp.code === 201) {
+        toast({ title: 'Cotización guardada', description: 'La cotización fue creada exitosamente.' });
+        setIsQuoteOpen(false);
+        setQuoteOperation(null);
+      } else {
+        throw new Error(resp.message || 'Error al crear la cotización');
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: error.message || 'No se pudo guardar la cotización.', variant: 'destructive' });
+    }
   };
 
   const handleAction = async (actionType, row) => {
@@ -94,6 +115,11 @@ const OperationsPage = () => {
       case 'addQuote':
         setQuoteOperation(row);
         setIsQuoteOpen(true);
+        break;
+      case 'quotes':
+      case 'manageQuotes':
+        setQuotesOperation(row);
+        setIsQuotesListOpen(true);
         break;
       case 'edit':
         handleOpenModal('edit', row);
@@ -113,7 +139,27 @@ const OperationsPage = () => {
         toast({ title: 'Cotizaciones', description: 'Próximamente: gestión de cotizaciones.' });
         break;
       case 'offer':
-        toast({ title: 'Oferta', description: 'Próximamente: generación de oferta y PDF.' });
+        try {
+          setOfferOperation(row);
+          // 1) Intentar obtener oferta existente
+          const existing = await getOfferByOperation(row._id);
+          let draft = existing?.data;
+          // 2) Si no existe, armar desde la cotización seleccionada
+          if (!draft) {
+            if (!row.cotizacionSeleccionadaId) {
+              toast({ title: 'Cotización requerida', description: 'Selecciona una cotización antes de generar la oferta.', variant: 'destructive' });
+              setOfferOperation(null);
+              return;
+            }
+            const assembled = await assembleOfferFromQuote(row._id, row.cotizacionSeleccionadaId);
+            draft = assembled?.data;
+          }
+          setOfferDraft(draft || { operationId: row._id, quoteId: row.cotizacionSeleccionadaId, items: [] });
+          setIsOfferOpen(true);
+        } catch (e) {
+          toast({ title: 'Error', description: e.message || 'No se pudo preparar la oferta.', variant: 'destructive' });
+          setOfferOperation(null);
+        }
         break;
       case 'status':
         toast({ title: 'Estatus', description: 'Próximamente: línea de tiempo de estatus.' });
@@ -126,6 +172,23 @@ const OperationsPage = () => {
         break;
       default:
         break;
+    }
+  };
+
+  const handleSaveOffer = async (payload) => {
+    try {
+      const resp = await upsertOffer(payload);
+      if (resp.code === 200) {
+        toast({ title: 'Oferta guardada', description: 'La oferta fue guardada exitosamente.' });
+        setIsOfferOpen(false);
+        setOfferOperation(null);
+        setOfferDraft(null);
+        fetchAndSet();
+      } else {
+        throw new Error(resp.message || 'Error al guardar oferta');
+      }
+    } catch (e) {
+      toast({ title: 'Error', description: e.message || 'No se pudo guardar la oferta.', variant: 'destructive' });
     }
   };
 
@@ -181,6 +244,37 @@ const OperationsPage = () => {
             onClose={() => { setIsQuoteOpen(false); setQuoteOperation(null); }}
             onSave={handleSaveQuote}
             operation={quoteOperation}
+          />
+        )}
+        {isQuotesListOpen && (
+          <QuotesListModal
+            isOpen={isQuotesListOpen}
+            operation={quotesOperation}
+            onClose={() => { setIsQuotesListOpen(false); setQuotesOperation(null); }}
+            onSelect={async (q) => {
+              try {
+                const resp = await selectOperationQuote(quotesOperation?._id, q._id);
+                if (resp.code === 200) {
+                  toast({ title: 'Cotización seleccionada', description: `Se seleccionó la cotización (${q.totalUsd?.toFixed?.(2) ?? q.totalUsd})` });
+                  setIsQuotesListOpen(false);
+                  setQuotesOperation(null);
+                  fetchAndSet();
+                } else {
+                  throw new Error(resp.message || 'Error al seleccionar cotización');
+                }
+              } catch (e) {
+                toast({ title: 'Error', description: e.message || 'No se pudo seleccionar la cotización', variant: 'destructive' });
+              }
+            }}
+          />
+        )}
+        {isOfferOpen && (
+          <OfferBuilderModal
+            isOpen={isOfferOpen}
+            onClose={() => { setIsOfferOpen(false); setOfferOperation(null); setOfferDraft(null); }}
+            operation={offerOperation}
+            initialDraft={offerDraft}
+            onSave={handleSaveOffer}
           />
         )}
       </AnimatePresence>
