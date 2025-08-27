@@ -5,6 +5,9 @@ import DashboardPage from '@/pages/DashboardPage';
 import ProvidersPage from '@/pages/parametrizacion/providers/ProvidersPage';
 import ClientsParametrizationPage from '@/pages/parametrizacion/clients/ClientsPage';
 import OperatorsPage from '@/pages/parametrizacion/operators/OperatorsPage';
+import OperationTypesPage from '@/pages/parametrizacion/operation-types/OperationTypesPage';
+import ViasPage from '@/pages/parametrizacion/vias/ViasPage';
+import LoadingPortsPage from '@/pages/parametrizacion/loading-ports/LoadingPortsPage';
 import LoginPage from '@/pages/LoginPage';
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import UsuariosPage from '@/pages/parametrizacion/usuarios/UsuariosPage';
@@ -96,6 +99,24 @@ function AppContent() {
         <Route path="/parametrizacion/usuarios" element={
           <ProtectedRoute requiredModule="users">
             <UsuariosPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Parametrización adicionales */
+        }
+        <Route path="/parametrizacion/tipos-operacion" element={
+          <ProtectedRoute requiredModule={MODULES.OPERATION_TYPES}>
+            <OperationTypesPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/parametrizacion/vias" element={
+          <ProtectedRoute requiredModule={MODULES.VIAS}>
+            <ViasPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/parametrizacion/puertos-carga" element={
+          <ProtectedRoute requiredModule={MODULES.LOADING_PORTS}>
+            <LoadingPortsPage />
           </ProtectedRoute>
         } />
 

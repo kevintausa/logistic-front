@@ -142,9 +142,14 @@ const UsuariosPage = () => {
     { id: 'correo', label: 'Correo' },
     { id: 'rol', label: 'Rol' },
     {
-      id: 'lavanderia',
-      label: 'Centro de Lavado',
-      render: (row) => row?.lavanderia?.nombre || '-',
+      id: 'operador',
+      label: 'Operador logístico',
+      render: (row) => row?.operador?.nombre || '-',
+    },
+    {
+      id: 'fecha_vencimiento_acceso',
+      label: 'Fecha de vencimiento de acceso',
+      render: (row) => row?.fecha_vencimiento_acceso || '-',
     },
   ];
 

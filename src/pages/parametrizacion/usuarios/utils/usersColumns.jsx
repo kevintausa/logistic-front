@@ -1,3 +1,5 @@
+import { fetchOperators } from '@/pages/parametrizacion/operators/Services/operators.services';
+
 export const usersColumns = [
   {
     id: 'estado',
@@ -22,14 +24,27 @@ export const usersColumns = [
     options: [
       { value: 'admin', label: 'Administrador' },
       { value: 'operador', label: 'Operador' },
-      { value: 'supervisor', label: 'Supervisor' },
       { value: 'asesor', label: 'Asesor' },
       { value: 'cliente', label: 'Cliente' },
-      { value: 'centro_lavado', label: 'Centro de Lavado' },
-      { value: 'documentacion', label: 'Documentación' },
     ],
   },
-  { id: 'lavanderia', label: 'Centro de Lavado', type: 'text', required: false },
+  {
+    id: 'operador',
+    label: 'Operador logístico',
+    type: 'asyncSelect',
+    required: true,
+    // Cargar operadores activos al abrir el modal
+    fetchOptions: async () => {
+      const { data } = await fetchOperators({ limit: 1000, offset: 1, query: { estado: 'Activo' } });
+      return (data || []).map(op => ({ label: op.nombre, value: { id: op._id || op.id, nombre: op.nombre } }));
+    },
+  },
+  {
+    id: 'fecha_vencimiento_acceso',
+    label: 'Fecha de vencimiento de acceso',
+    type: 'date',
+    required: false,
+  },
 ];
 
 export const columnsExcel = [
@@ -37,5 +52,5 @@ export const columnsExcel = [
   { key: 'nombre', header: 'Nombre' },
   { key: 'correo', header: 'Correo' },
   { key: 'rol', header: 'Rol' },
-  { key: 'lavanderia.nombre', header: 'Centro de Lavado' },
+  { key: 'operador.nombre', header: 'Operador logístico' },
 ];

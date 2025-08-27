@@ -4,9 +4,9 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Menu, X, LayoutDashboard, Building2, Users, User2, Briefcase, Clock, BarChart3, Shirt, PackageSearch, Settings, UserCog, LogOut, Cog, Zap, Book, FileText } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Building2, Users, User2, Briefcase, Clock, BarChart3, Shirt, PackageSearch, Settings, UserCog, LogOut, Cog, Zap, Book, FileText, Layers3, Navigation, Anchor } from 'lucide-react';
 import { useAuth, MODULES } from '@/contexts/AuthContext';
-import logo from '@/images/LOGO-PROFLUX-ERP.png';
+import logo from '@/images/LOGO-DLT.png';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import UpdateNotifier from '@/components/UpdateNotifier';
 import { fetchLatestVersion, getLocalVersion } from '@/services/version.service';
@@ -81,6 +81,24 @@ const Navbar = () => {
           module: MODULES.OPERATORS
         },
         {
+          name: 'Tipos de Operación',
+          path: '/parametrizacion/tipos-operacion',
+          icon: Layers3,
+          module: MODULES.OPERATION_TYPES,
+        },
+        {
+          name: 'Vías',
+          path: '/parametrizacion/vias',
+          icon: Navigation,
+          module: MODULES.VIAS,
+        },
+        {
+          name: 'Puertos de Carga',
+          path: '/parametrizacion/puertos-carga',
+          icon: Anchor,
+          module: MODULES.LOADING_PORTS,
+        },
+        {
           name: 'Proveedores',
           path: '/parametrizacion/proveedores',
           icon: Briefcase,
@@ -113,7 +131,10 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-20">
           <Link to="/" className="flex items-center space-x-2 pt-4 ">
             <motion.div whileHover={{ rotate: [0, 5, -5, 0] }}>
-              <img src={logo} alt="LOGO-PROFLUX-ERP" className="h-20 w-auto" />
+              <img src={logo} alt="LOGO-PROFLUX-ERP" style={{ 
+                height: '40px',
+                width: 'auto',
+                filter: 'invert(28%) sepia(90%) saturate(7470%) hue-rotate(200deg) brightness(95%) contrast(100%)', }} />
             </motion.div>
           </Link>
 
@@ -125,8 +146,8 @@ const Navbar = () => {
                     <Button
                       variant="ghost"
                       className={`flex items-center space-x-2 px-3 py-2 text-base font-medium transition-colors duration-300 rounded-md ${location.pathname.startsWith(item.path)
-                          ? activeLinkClass
-                          : inactiveLinkClass
+                        ? activeLinkClass
+                        : inactiveLinkClass
                         }`}
                     >
                       {item.icon}
@@ -190,7 +211,7 @@ const Navbar = () => {
                     <div className="text-xs text-muted-foreground">{user.email}</div>
                     <div className="text-xs text-primary">{user?.lavanderia?.nombre || ''}</div>
                   </div>
-                  
+
                   {/* Theme toggle (desktop) */}
                   <div className="ml-2">
                     <ThemeToggle variant="buttons" />
@@ -276,11 +297,11 @@ const Navbar = () => {
               <div className="px-4 text-xs text-muted-foreground mb-3">
                 {user.email}
               </div>
-              
-                {/* Theme toggle (desktop) */}
-                <div className="ml-2">
-                  <ThemeToggle variant="buttons" />
-                </div>
+
+              {/* Theme toggle (desktop) */}
+              <div className="ml-2">
+                <ThemeToggle variant="buttons" />
+              </div>
               <button
                 onClick={() => {
                   logout();

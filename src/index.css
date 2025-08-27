@@ -13,57 +13,57 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222.2 47.4% 11.2%;
 
-  --primary: 262.1 83.3% 57.8%; /* Vibrant Purple */
+  --primary: 205 90% 50%; /* Azul cielo brillante */
   --primary-foreground: 210 40% 98%;
 
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 262.1 83.3% 57.8%; /* Morado (usado en cotizaciones) */
+  --secondary-foreground: 210 40% 98%;
 
   --muted: 210 40% 96.1%;
   --muted-foreground: 215.4 16.3% 46.9%;
 
-  --accent: 240 5.9% 90%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --accent: 217.2 32.6% 17.5%; /* Azul más oscuro para acentos */
+  --accent-foreground: 210 40% 98%;
 
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
 
   --border: 214.3 31.8% 91.4%;
   --input: 214.3 31.8% 91.4%;
-  --ring: 262.1 83.3% 57.8%;
+  --ring: 205 90% 60%; /* Azul cielo un poco más claro para anillos de foco */
 
   --radius: 0.75rem;
 }
 
 .dark {
-  /* Dark theme tokens */
-  --background: 0 0% 3.9%;
-  --foreground: 0 0% 98%;
+  /* Dark theme tokens (azules) */
+  --background: 222.2 84% 4.9%; /* Azul oscuro/grisáceo */
+  --foreground: 210 40% 98%; /* Blanco casi puro */
 
-  --card: 0 0% 3.9%;
-  --card-foreground: 0 0% 98%;
+  --card: 224 71.4% 4.1%; /* Un poco más oscuro que el fondo */
+  --card-foreground: 210 40% 98%;
 
-  --popover: 0 0% 3.9%;
-  --popover-foreground: 0 0% 98%;
+  --popover: 224 71.4% 4.1%;
+  --popover-foreground: 210 40% 98%;
 
-  --primary: 262.1 83.3% 57.8%;
-  --primary-foreground: 0 0% 98%;
+  --primary: 205 90% 50%; /* Azul cielo brillante */
+  --primary-foreground: 210 40% 98%;
 
-  --secondary: 0 0% 14.9%;
-  --secondary-foreground: 0 0% 98%;
+  --secondary: 262.1 83.3% 57.8%; /* Morado (usado en cotizaciones) */
+  --secondary-foreground: 210 40% 98%;
 
-  --muted: 0 0% 14.9%;
-  --muted-foreground: 0 0% 63.9%;
+  --accent: 217.2 32.6% 17.5%; /* Azul más oscuro para acentos */
+  --accent-foreground: 210 40% 98%;
 
-  --accent: 0 0% 14.9%;
-  --accent-foreground: 0 0% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%; /* Gris claro */
 
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
+  --destructive: 0 72.2% 50.6%; /* Rojo */
+  --destructive-foreground: 210 40% 98%;
 
-  --border: 0 0% 14.9%;
-  --input: 0 0% 14.9%;
-  --ring: 262.1 83.3% 57.8%;
+  --border: 217.2 32.6% 27.5%; /* Borde sutil */
+  --input: 217.2 32.6% 22.5%; /* Inputs */
+  --ring: 205 90% 60%; /* Anillos de foco */
 }
 
 @layer base {
@@ -74,41 +74,44 @@
 }
 
 .gradient-text {
-  @apply bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-blue-500 via-sky-500 to-cyan-400 bg-clip-text text-transparent;
 }
 
 .hero-gradient-bg {
   /* Light mode hero background */
-  @apply bg-gradient-to-br from-white via-purple-50 to-pink-50;
+  @apply bg-gradient-to-br from-white via-blue-50 to-sky-50;
 }
 
 .card-gradient-bg {
   /* Light mode card background */
-  @apply bg-gradient-to-br from-white via-purple-50 to-white border border-purple-200;
+  @apply bg-gradient-to-br from-white via-blue-50 to-white border border-blue-200;
 }
 
 /* Dark mode overrides */
 .dark .hero-gradient-bg {
-  @apply bg-gradient-to-br from-gray-900 via-purple-900 to-pink-900;
+  @apply bg-gradient-to-br from-gray-900 via-blue-900 to-sky-900;
 }
 
 .dark .card-gradient-bg {
-  @apply bg-gradient-to-br from-gray-800 via-purple-900/50 to-gray-800 border border-purple-700/50;
+  @apply bg-gradient-to-br from-gray-800 via-blue-900/50 to-gray-800 border border-blue-700/50;
 }
-  
+
 .custom-scrollbar::-webkit-scrollbar {
   height: 8px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #797878;
+  background: #64748b; /* slate-500 */
   border-radius: 4px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #371b9b;
+  background: #2563eb; /* blue-600 */
   border-radius: 4px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #36304d;
+  background: #1d4ed8; /* blue-700 */
 }
 
 /* Calendario blanco en inputs (date/month) para mejor contraste en fondo oscuro */

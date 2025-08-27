@@ -1,92 +1,130 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Users, Building2, Shirt, Clock } from 'lucide-react';
+import { BarChart, Users, Briefcase, AlertTriangle } from 'lucide-react';
 
-const StatCard = ({ title, value, icon, description, color }) => (
-  <Card className="card-gradient-bg shadow-lg hover:shadow-xl transition-shadow duration-300">
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium text-primary-foreground">{title}</CardTitle>
-      {React.cloneElement(icon, { className: `h-5 w-5 ${color || 'text-accent'}` })}
-    </CardHeader>
-    <CardContent>
-      <div className="text-3xl font-bold gradient-text">{value}</div>
-      <p className="text-xs text-muted-foreground pt-1">{description}</p>
-    </CardContent>
-  </Card>
+// Mapa de estilos por color para evitar clases dinámicas no detectadas por Tailwind
+const colorStyles = {
+  sky: {
+    header: 'text-sky-400',
+    icon: 'text-sky-500',
+    hover: 'hover:border-sky-500',
+  },
+  green: {
+    header: 'text-green-400',
+    icon: 'text-green-500',
+    hover: 'hover:border-green-500',
+  },
+  purple: {
+    header: 'text-purple-400',
+    icon: 'text-purple-500',
+    hover: 'hover:border-purple-500',
+  },
+  orange: {
+    header: 'text-orange-400',
+    icon: 'text-orange-500',
+    hover: 'hover:border-orange-500',
+  },
+};
+
+const StatCard = ({ title, value, icon, color = 'sky', unit }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3 }}
+    className={`bg-card p-6 rounded-xl shadow-lg border border-border transition-colors duration-300 ${
+      colorStyles[color]?.hover || ''
+    }`}
+  >
+    <div className="flex items-center justify-between mb-3">
+      <h3 className={`text-lg font-semibold ${colorStyles[color]?.header || ''}`}>{title}</h3>
+      {React.cloneElement(icon, { size: 28, className: `${colorStyles[color]?.icon || ''}` })}
+    </div>
+    <p className="text-4xl font-bold text-foreground">
+      {value}
+      {unit && <span className="text-xl text-muted-foreground ml-1">{unit}</span>}
+    </p>
+  </motion.div>
 );
 
+// Hook local simple para sincronizar con localStorage
+const useLocalStorage = (key, defaultValue) => {
+  const [value, setValue] = useState(() => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {}
+  }, [key, value]);
+  return [value, setValue];
+};
+
 const DashboardPage = () => {
+  const [operaciones] = useLocalStorage('operaciones', []);
+  const [clientes] = useLocalStorage('clientes', []);
+
+  const totalOperaciones = operaciones.length;
+  const operacionesActivas = operaciones.filter(
+    (op) => op.estado === 'Activo' || op.estado === 'En curso'
+  ).length;
+  const totalClientes = clientes.length;
+  const operacionesPendientes = operaciones.filter((op) => op.estado === 'Pendiente').length;
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
       className="space-y-8"
     >
-      <h1 className="text-4xl font-bold gradient-text">Panel de Control</h1>
-      
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          title="Lugares Activos" 
-          value="5" 
-          icon={<Building2 />} 
-          description="Total de centros operativos"
-          color="text-purple-400"
-        />
-        <StatCard 
-          title="Empleados Registrados" 
-          value="25" 
-          icon={<Users />} 
-          description="Personal total en la plataforma"
-          color="text-sky-400"
-        />
-        <StatCard 
-          title="Prendas Procesadas (Hoy)" 
-          value="1,250" 
-          icon={<Shirt />} 
-          description="+15% vs ayer"
-          color="text-pink-400"
-        />
-        <StatCard 
-          title="Horas Registradas (Hoy)" 
-          value="180" 
-          icon={<Clock />} 
-          description="Total de horas trabajadas"
-          color="text-green-400"
-        />
+      <h1 className="text-4xl font-bold tracking-tight text-sky-400 mb-10">Dashboard General</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard title="Operaciones Totales" value={totalOperaciones} icon={<BarChart />} color="sky" />
+        <StatCard title="Operaciones Activas" value={operacionesActivas} icon={<Briefcase />} color="green" />
+        <StatCard title="Clientes Registrados" value={totalClientes} icon={<Users />} color="purple" />
+        <StatCard title="Operaciones Pendientes" value={operacionesPendientes} icon={<AlertTriangle />} color="orange" />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="card-gradient-bg shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-primary-foreground">Actividad Reciente</CardTitle>
-            <CardDescription className="text-muted-foreground">Últimos movimientos en el sistema.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3">
-              <li className="text-sm text-primary-foreground/90">Nuevo cliente 'Hotel Paraíso' añadido.</li>
-              <li className="text-sm text-primary-foreground/90">Empleado 'Ana Pérez' completó turno de 8h.</li>
-              <li className="text-sm text-primary-foreground/90">Recepción de 200kg de ropa de 'Resort Solymar'.</li>
-            </ul>
-          </CardContent>
-        </Card>
-        <Card className="card-gradient-bg shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-primary-foreground">Alertas y Notificaciones</CardTitle>
-            <CardDescription className="text-muted-foreground">Información importante que requiere tu atención.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-amber-400">Mantenimiento de máquina #3 programado para mañana.</p>
-            <p className="text-sm text-red-400 mt-2">Bajo stock de detergente XYZ.</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="bg-card p-6 rounded-xl shadow-lg border border-border"
+        >
+          <h2 className="text-2xl font-semibold text-pink-400 mb-4">Actividad Reciente</h2>
+          {operaciones.slice(0, 5).map((op) => (
+            <div key={op.id} className="py-3 border-b border-border last:border-b-0">
+              <p className="text-foreground font-medium">{op.id} - {op.nombreCliente}</p>
+              <p className="text-sm text-muted-foreground">{op.tipoOperacion} ({op.estado})</p>
+            </div>
+          ))}
+          {operaciones.length === 0 && (
+            <p className="text-muted-foreground">No hay actividad reciente.</p>
+          )}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="bg-card p-6 rounded-xl shadow-lg border border-border"
+        >
+          <h2 className="text-2xl font-semibold text-teal-400 mb-4">Próximas Tareas (Simulado)</h2>
+          <ul className="space-y-3 list-disc list-inside text-foreground">
+            <li>Seguimiento Operación OPX001</li>
+            <li>Confirmar documentación Cliente Y</li>
+            <li>Revisar cotizaciones para Operación OPZ003</li>
+          </ul>
+        </motion.div>
       </div>
-      {/*  <img  
-        alt="Gráfico de barras mostrando el rendimiento de la lavandería" 
-        class="w-full h-auto rounded-lg shadow-xl mt-8"
-       src="https://images.unsplash.com/photo-1675193915025-7901f1992d1d" /> */}
     </motion.div>
   );
 };
