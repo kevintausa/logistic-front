@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Menu, X, LayoutDashboard, Building2, Users, User2, Briefcase, Clock, BarChart3, Shirt, PackageSearch, Settings, UserCog, LogOut, Cog, Zap, Book, FileText, Layers3, Navigation, Anchor } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Building2, Users, User2, Briefcase, Clock, BarChart3, Shirt, PackageSearch, Settings, UserCog, LogOut, Cog, Zap, Book, FileText, Layers3, Navigation, Anchor, Plane } from 'lucide-react';
 import { useAuth, MODULES } from '@/contexts/AuthContext';
 import logo from '@/images/LOGO-DLT.png';
 import ThemeToggle from '@/components/ui/ThemeToggle';
@@ -97,6 +97,12 @@ const Navbar = () => {
           path: '/parametrizacion/puertos-carga',
           icon: Anchor,
           module: MODULES.LOADING_PORTS,
+        },
+        {
+          name: 'Aeropuertos',
+          path: '/parametrizacion/aeropuertos',
+          icon: Plane,
+          module: MODULES.AIRPORTS,
         },
         {
           name: 'Proveedores',

@@ -1,21 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Anchor, PlusCircle, FilterIcon } from 'lucide-react';
+import { Plane, PlusCircle, FilterIcon } from 'lucide-react';
 import AppliedFilters from '@/components/AppliedFilters';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import DataTable from '@/components/DataTable';
 import DynamicFormModal from '@/components/DynamicFormModal';
 import { useToast } from '@/components/ui/use-toast';
-import { loadingPortsColumns, columnsExcel } from './utils/loadingPortsColumns';
+import { airportsColumns, columnsExcel } from './utils/airportsColumns';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { fetchLoadingPorts, createLoadingPort, updateLoadingPort, deleteLoadingPort, exportLoadingPorts } from './Services/loading-ports.services';
+import { fetchAirports, createAirport, updateAirport, deleteAirport, exportAirports } from './Services/airports.services';
 import FilterDrawer from '@/components/FilterDrawer';
 import ExportExcelButton from '@/components/ExportExcelButton';
 
 const DEFAULT_FILTERS = {};
 
-const LoadingPortsPage = () => {
+const AirportsPage = () => {
   const { toast } = useToast();
   const [displayedData, setDisplayedData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,45 +34,38 @@ const LoadingPortsPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  // Debounce search term
   useEffect(() => {
     const id = setTimeout(() => setDebouncedTerm(searchTerm.trim()), 300);
     return () => clearTimeout(id);
   }, [searchTerm]);
 
-  // Build query with $or for quick search
   useEffect(() => {
     const base = { ...filters };
-    // Remove previous $or before applying a new one
     delete base.$or;
     if (debouncedTerm) {
       base.$or = [
         { nombre: { $regex: debouncedTerm, $options: 'i' } },
         { ciudad: { $regex: debouncedTerm, $options: 'i' } },
-        { codigo: { $regex: debouncedTerm, $options: 'i' } },
-        { locode: { $regex: debouncedTerm, $options: 'i' } },
         { pais: { $regex: debouncedTerm, $options: 'i' } },
-        { subdivision: { $regex: debouncedTerm, $options: 'i' } },
-        { tipo: { $regex: debouncedTerm, $options: 'i' } },
-        { status: { $regex: debouncedTerm, $options: 'i' } },
         { iata: { $regex: debouncedTerm, $options: 'i' } },
-        { funciones: { $regex: debouncedTerm, $options: 'i' } },
+        { icao: { $regex: debouncedTerm, $options: 'i' } },
+        { tipo: { $regex: debouncedTerm, $options: 'i' } },
       ];
     }
     setFilters(base);
     setCurrentPage(1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedTerm]);
 
   const fetchAndSet = useCallback(async () => {
     setIsLoading(true);
     try {
       const offset = currentPage;
-      const { data, totalRecords } = await fetchLoadingPorts({ limit: itemsPerPage, offset, query: filters });
+      const { data, totalRecords } = await fetchAirports({ limit: itemsPerPage, offset, query: filters });
       setDisplayedData(data);
       setTotalItems(totalRecords);
     } catch (error) {
-      toast({ title: 'Error', description: error.message || 'No se pudieron obtener los puertos de carga.', variant: 'destructive' });
+      toast({ title: 'Error', description: error.message || 'No se pudieron obtener los aeropuertos.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -88,11 +81,11 @@ const LoadingPortsPage = () => {
   const handleSaveItem = async (itemData) => {
     try {
       if (modalMode === 'create') {
-        const response = await createLoadingPort(itemData);
-        if (response.code === 201) toast({ title: 'Creado', description: 'Puerto de carga creado.' }); else throw new Error(response.message);
+        const response = await createAirport(itemData);
+        if (response.code === 201) toast({ title: 'Creado', description: 'Aeropuerto creado.' }); else throw new Error(response.message);
       } else {
-        const response = await updateLoadingPort(currentItem._id, itemData);
-        if (response.code === 200) toast({ title: 'Actualizado', description: 'Puerto de carga actualizado.' }); else throw new Error(response.message);
+        const response = await updateAirport(currentItem._id, itemData);
+        if (response.code === 200) toast({ title: 'Actualizado', description: 'Aeropuerto actualizado.' }); else throw new Error(response.message);
       }
     } catch (error) {
       toast({ title: 'Error', description: error.message || 'Problema al guardar.', variant: 'destructive' });
@@ -105,7 +98,7 @@ const LoadingPortsPage = () => {
   const handleDeleteConfirmation = (item) => { setItemToDelete(item); setIsDeleteDialogOpen(true); };
   const handleDeleteItem = async () => {
     try {
-      const response = await deleteLoadingPort(itemToDelete._id);
+      const response = await deleteAirport(itemToDelete._id);
       if (response.code === 200) { toast({ title: 'Eliminado', description: 'Registro eliminado.' }); fetchAndSet(); }
       else throw new Error(response.message);
     } catch (error) {
@@ -125,15 +118,15 @@ const LoadingPortsPage = () => {
       <Card>
         <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="bg-primary/10 p-3 rounded-lg"><Anchor className="h-8 w-8 text-primary" /></div>
+            <div className="bg-primary/10 p-3 rounded-lg"><Plane className="h-8 w-8 text-primary" /></div>
             <div>
-              <CardTitle className="text-2xl">Parametrización: Puertos de Carga</CardTitle>
-              <CardDescription>Gestiona los puertos de carga.</CardDescription>
+              <CardTitle className="text-2xl">Parametrización: Aeropuertos</CardTitle>
+              <CardDescription>Gestiona los aeropuertos.</CardDescription>
             </div>
           </div>
           <div className="w-full md:w-auto flex flex-col md:flex-row gap-3">
             <div className="flex flex-wrap gap-2 justify-end">
-              <ExportExcelButton title="Puertos de Carga" columns={columnsExcel} getData={() => exportLoadingPorts({ query: filters })} />
+              <ExportExcelButton title="Aeropuertos" columns={columnsExcel} getData={() => exportAirports({ query: filters })} />
               <Button onClick={() => handleOpenModal('create')}><PlusCircle className="mr-2 h-4 w-4" /> Crear</Button>
               <Button onClick={() => setIsDrawerOpen(true)} className="flex items-center font-semibold bg-black hover:bg-white/20 "><FilterIcon className="mr-2 h-4 w-4" />Filtros</Button>
             </div>
@@ -145,7 +138,7 @@ const LoadingPortsPage = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por nombre, ciudad, código, locode, país..."
+              placeholder="Buscar por nombre, ciudad, país, IATA, ICAO..."
               className="w-full md:w-1/2 border rounded px-3 py-2"
             />
           </div>
@@ -156,13 +149,13 @@ const LoadingPortsPage = () => {
               onRemoveFilter={handleRemoveFilter}
             />
           </div>
-          <DataTable data={displayedData} columns={loadingPortsColumns} isLoading={isLoading} onAction={handleAction} page={currentPage} limit={itemsPerPage} totalRecords={totalItems} onPageChange={handlePageChange} onLimitChange={handleLimitChange} />
+          <DataTable data={displayedData} columns={airportsColumns} isLoading={isLoading} onAction={handleAction} page={currentPage} limit={itemsPerPage} totalRecords={totalItems} onPageChange={handlePageChange} onLimitChange={handleLimitChange} />
           <FilterDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} fields={[{ id: 'createdAt', label: 'Rango de fechas', type: 'daterange', defaultToday: true }]} initialFilters={filters} onChange={handleFilterChange} onApply={handleFilterChange} initialDay={true} />
         </CardContent>
       </Card>
       <AnimatePresence>
         {isModalOpen && (
-          <DynamicFormModal isOpen={isModalOpen} onClose={handleCloseModal} onSave={handleSaveItem} item={currentItem} fields={loadingPortsColumns} title={currentItem ? 'Editar Puerto de Carga' : 'Crear Puerto de Carga'} />
+          <DynamicFormModal isOpen={isModalOpen} onClose={handleCloseModal} onSave={handleSaveItem} item={currentItem} fields={airportsColumns} title={currentItem ? 'Editar Aeropuerto' : 'Crear Aeropuerto'} />
         )}
       </AnimatePresence>
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -181,4 +174,4 @@ const LoadingPortsPage = () => {
   );
 };
 
-export default LoadingPortsPage;
+export default AirportsPage;

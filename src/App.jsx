@@ -8,6 +8,7 @@ import OperatorsPage from '@/pages/parametrizacion/operators/OperatorsPage';
 import OperationTypesPage from '@/pages/parametrizacion/operation-types/OperationTypesPage';
 import ViasPage from '@/pages/parametrizacion/vias/ViasPage';
 import LoadingPortsPage from '@/pages/parametrizacion/loading-ports/LoadingPortsPage';
+import AirportsPage from '@/pages/parametrizacion/airports/AirportsPage';
 import LoginPage from '@/pages/LoginPage';
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import UsuariosPage from '@/pages/parametrizacion/usuarios/UsuariosPage';
@@ -117,6 +118,11 @@ function AppContent() {
         <Route path="/parametrizacion/puertos-carga" element={
           <ProtectedRoute requiredModule={MODULES.LOADING_PORTS}>
             <LoadingPortsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/parametrizacion/aeropuertos" element={
+          <ProtectedRoute requiredModule={MODULES.AIRPORTS}>
+            <AirportsPage />
           </ProtectedRoute>
         } />
 
