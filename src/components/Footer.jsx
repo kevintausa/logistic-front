@@ -13,10 +13,10 @@ const Footer = () => {
     >
       <div className="container mx-auto px-4">
         <p className="text-sm text-muted-foreground">
-          &copy; {currentYear} ERP- Proflux . Todos los derechos reservados.
+          &copy; {currentYear} ERP- Logistic International . Todos los derechos reservados.
         </p>
         <p className="text-xs text-muted-foreground/70 mt-1">
-          Desarrollado por By DLTausa
+          Desarrollado por DLTausa
         </p>
       </div>
     </motion.footer>

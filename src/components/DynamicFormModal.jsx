@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { X, Loader2, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const DynamicFormModal = ({ isOpen, onClose, onSave, item, fields, title, mode }) => {
+const DynamicFormModal = ({ isOpen, onClose, onSave, item, fields, title, mode, modalClassName, twoColumns = false }) => {
   const [formData, setFormData] = useState({});
   const [errors, setErrors] = useState({});
   const [isFormValid, setIsFormValid] = useState(false);
@@ -236,7 +236,7 @@ const DynamicFormModal = ({ isOpen, onClose, onSave, item, fields, title, mode }
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-        className="bg-card p-6 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border"
+        className={`bg-card p-6 rounded-lg shadow-xl w-full ${modalClassName || 'max-w-lg'} max-h-[90vh] overflow-y-auto border`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
@@ -245,7 +245,7 @@ const DynamicFormModal = ({ isOpen, onClose, onSave, item, fields, title, mode }
             <X className="h-5 w-5" />
           </Button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className={twoColumns ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-4'}>
           {effectiveFields.map(field => (
             <div key={field.id} className="space-y-1.5">
               <Label htmlFor={field.id} className="text-sm font-medium text-foreground">

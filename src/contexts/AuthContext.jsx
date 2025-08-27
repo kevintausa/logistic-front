@@ -29,6 +29,7 @@ export const MODULES = {
   VIAS: 'vias',
   LOADING_PORTS: 'loading_ports',
   AIRPORTS: 'airports',
+  OPERATIONS: 'operations',
 };
 
 // Permisos por rol
@@ -45,6 +46,7 @@ const ROLE_PERMISSIONS = {
     MODULES.VIAS,
     MODULES.LOADING_PORTS,
     MODULES.AIRPORTS,
+    MODULES.OPERATIONS,
   ],
   [ROLES.EMPLOYEE]: [
     MODULES.DASHBOARD,

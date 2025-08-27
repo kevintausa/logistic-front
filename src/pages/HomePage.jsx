@@ -33,7 +33,7 @@ const HomePage = () => {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="text-5xl md:text-6xl font-extrabold mb-6"
         >
-          <span className="gradient-text">ERP- Proflux</span>
+          <span className="gradient-text">ERP- Logistic International</span>
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: 30 }}
@@ -87,7 +87,7 @@ const HomePage = () => {
            src="https://images.unsplash.com/photo-1638949493140-edb10b7be2f3" />
         <h2 className="text-3xl font-bold mb-6 gradient-text">Transforma tu Negocio Hoy</h2>
         <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-          Deja atrás los métodos obsoletos y da el salto a una gestión digital, ágil y poderosa con ERP- Proflux.
+          Deja atrás los métodos obsoletos y da el salto a una gestión digital, ágil y poderosa con ERP- Logistic International.
         </p>
         <Button asChild size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/10 hover:text-primary font-semibold shadow-md transform hover:scale-105 transition-transform duration-300">
           <Link to="/contacto">

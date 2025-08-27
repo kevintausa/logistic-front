@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, Edit, Trash, Check, AlertCircle, LogOut } from 'lucide-react';
+import { Eye, Edit, Trash, Check, AlertCircle, LogOut, FileText, Tag, ListChecks, Lock, Ban, Plus } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Pagination from './Pagination';
 import { Button } from '@/components/ui/button';
 import {
@@ -103,20 +104,35 @@ const DataTable = ({ data, columns, isLoading, onAction, page, limit, totalRecor
                           case 'Trash': Icon = Trash; break;
                           case 'Check': Icon = Check; break;
                           case 'LogOut': Icon = LogOut; break;
+                          case 'FileText': Icon = FileText; break;
+                          case 'Tag': Icon = Tag; break;
+                          case 'ListChecks': Icon = ListChecks; break;
+                          case 'Lock': Icon = Lock; break;
+                          case 'Ban': Icon = Ban; break;
+                          case 'Plus': Icon = Plus; break;
                           default: Icon = Edit;
                         }
+                        // Permitir 'key' o 'id' como identificador de acción
+                        const actionKey = action.key || action.id;
                         
                         return (
-                          <Button
-                            key={action.key}
-                            onClick={() => onAction && onAction(action.key, row)}
-                            variant="ghost"
-                            size="icon"
-                            className={`h-8 w-8 transition-colors hover:bg-black hover:text-white ${action.className || ''}`}
-                            title={action.tooltip || ''}
-                          >
-                            <Icon className="h-4 w-4" />
-                          </Button>
+                          <TooltipProvider key={actionKey}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  onClick={() => onAction && onAction(actionKey, row)}
+                                  variant="ghost"
+                                  size="icon"
+                                  className={`h-8 w-8 transition-colors hover:bg-black hover:text-white ${action.className || ''}`}
+                                >
+                                  <Icon className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <span>{action.tooltip || action.label || ''}</span>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         );
                       })}
                     </div>

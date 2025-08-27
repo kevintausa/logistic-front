@@ -9,6 +9,7 @@ import OperationTypesPage from '@/pages/parametrizacion/operation-types/Operatio
 import ViasPage from '@/pages/parametrizacion/vias/ViasPage';
 import LoadingPortsPage from '@/pages/parametrizacion/loading-ports/LoadingPortsPage';
 import AirportsPage from '@/pages/parametrizacion/airports/AirportsPage';
+import OperationsPage from '@/pages/operations/OperationsPage';
 import LoginPage from '@/pages/LoginPage';
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import UsuariosPage from '@/pages/parametrizacion/usuarios/UsuariosPage';
@@ -123,6 +124,13 @@ function AppContent() {
         <Route path="/parametrizacion/aeropuertos" element={
           <ProtectedRoute requiredModule={MODULES.AIRPORTS}>
             <AirportsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Operaciones */}
+        <Route path="/operaciones" element={
+          <ProtectedRoute requiredModule={MODULES.OPERATIONS}>
+            <OperationsPage />
           </ProtectedRoute>
         } />
 
