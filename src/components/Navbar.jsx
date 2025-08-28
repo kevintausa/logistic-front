@@ -111,6 +111,12 @@ const Navbar = () => {
           module: MODULES.AIRPORTS,
         },
         {
+          name: 'Conceptos de Oferta',
+          path: '/parametrizacion/conceptos-oferta',
+          icon: FileText,
+          module: MODULES.OFFER_CONCEPTS,
+        },
+        {
           name: 'Proveedores',
           path: '/parametrizacion/proveedores',
           icon: Briefcase,

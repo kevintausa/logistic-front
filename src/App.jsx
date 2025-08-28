@@ -24,6 +24,7 @@ import DocumentationHomePage from '@/pages/documents/DocumentationHomePage';
 import EmployeesDocsHome from '@/pages/documents/EmployeesDocsHome';
 import CentersDocsHome from '@/pages/documents/CentersDocsHome';
 import DocumentTypesPage from '@/pages/parametrizacion/documentTypes/DocumentTypesPage';
+import OfferConceptsPage from '@/pages/parametrizacion/offer-concepts/OfferConceptsPage';
 
 // Redirecciones simples al dashboard cuando el usuario está autenticado
 
@@ -124,6 +125,12 @@ function AppContent() {
         <Route path="/parametrizacion/aeropuertos" element={
           <ProtectedRoute requiredModule={MODULES.AIRPORTS}>
             <AirportsPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/parametrizacion/conceptos-oferta" element={
+          <ProtectedRoute requiredModule={MODULES.OFFER_CONCEPTS}>
+            <OfferConceptsPage />
           </ProtectedRoute>
         } />
 
