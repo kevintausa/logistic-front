@@ -16,7 +16,9 @@ import OperationDetailsModal from './components/OperationDetailsModal';
 import QuoteModal from './components/QuoteModal';
 import QuotesListModal from './components/QuotesListModal';
 import OfferBuilderModal from './components/OfferBuilderModal';
+import StatusModal from './components/StatusModal';
 import { getOfferByOperation, assembleOfferFromQuote, upsertOffer } from './Services/offers.services';
+import { createStatus } from './Services/statuses.services';
 
 const DEFAULT_FILTERS = {};
 
@@ -43,6 +45,8 @@ const OperationsPage = () => {
   const [offerOperation, setOfferOperation] = useState(null);
   const [offerDraft, setOfferDraft] = useState(null);
   const [offerReadOnly, setOfferReadOnly] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [statusOperation, setStatusOperation] = useState(null);
 
   const fetchAndSet = useCallback(async () => {
     setIsLoading(true);
@@ -321,7 +325,8 @@ const OperationsPage = () => {
         }
         break;
       case 'status':
-        toast({ title: 'Estatus', description: 'Próximamente: línea de tiempo de estatus.' });
+        setStatusOperation(row);
+        setIsStatusOpen(true);
         break;
       case 'close':
         toast({ title: 'Cerrar', description: 'Próximamente: cierre de operación.' });
@@ -335,19 +340,79 @@ const OperationsPage = () => {
   };
 
   const handleSaveOffer = async (payload) => {
-    try {
-      const resp = await upsertOffer(payload);
-      if (resp.code === 200) {
-        toast({ title: 'Oferta guardada', description: 'La oferta fue guardada exitosamente.' });
-        setIsOfferOpen(false);
-        setOfferOperation(null);
-        setOfferDraft(null);
-        fetchAndSet();
-      } else {
-        throw new Error(resp.message || 'Error al guardar oferta');
+  try {
+    const resp = await upsertOffer(payload);
+    if (resp.code === 200) {
+      // Actualizar estado de la operación a "Oferta enviada"
+      try {
+        if (offerOperation?._id) {
+          await updateOperation(offerOperation._id, { estado: 'Oferta enviada' });
+        }
+      } catch (e) {
+        // No bloquear por este error, solo informar
+        toast({ title: 'Aviso', description: 'Oferta guardada, pero no se pudo actualizar el estado de la operación.', variant: 'destructive' });
       }
+      toast({ title: 'Oferta guardada', description: 'La oferta fue guardada y la operación pasó a "Oferta enviada".' });
+      setIsOfferOpen(false);
+      setOfferOperation(null);
+      setOfferDraft(null);
+      fetchAndSet();
+    } else {
+      throw new Error(resp.message || 'Error al guardar oferta');
+    }
+  } catch (e) {
+    toast({ title: 'Error', description: e.message || 'No se pudo guardar la oferta.', variant: 'destructive' });
+  }
+};
+  
+
+  // Handlers para aprobar / rechazar oferta desde Status
+  const handleApproveOffer = async () => {
+    try {
+      const op = statusOperation;
+      if (!op?._id) return;
+      // Generar numTrazabilidad si no existe
+      const numTrazabilidad = op.numTrazabilidad || `${op.codigo || op._id}-${Date.now().toString().slice(-6)}`;
+      // 1) Actualizar operación a En curso y asignar numTrazabilidad
+      await updateOperation(op._id, { estado: 'En curso', numTrazabilidad });
+      // 2) Crear primer estatus
+      const payload = {
+        numtrazabilidad: numTrazabilidad,
+        cliente: {
+          id: op?.cliente?._id || op?.cliente?.id || op?.clienteId,
+          nit: op?.cliente?.nit || op?.cliente?.ruc || op?.cliente?.documento,
+          nombre: op?.cliente?.nombre,
+        },
+        operacion: {
+          id: op?._id,
+          descripcion: op?.descripcion || `Operación ${op.codigo || op._id}`,
+        },
+        titulo: 'Inicio Operación',
+        descripcion: 'Se inicia operación, próximamente recibirá novedades del proceso.',
+        fecha: new Date().toISOString(),
+        icono: 'PlayCircle',
+      };
+      await createStatus(payload);
+      toast({ title: 'Oferta aprobada', description: 'La operación pasó a En curso y se creó la trazabilidad.' });
+      setIsStatusOpen(false);
+      setStatusOperation(null);
+      fetchAndSet();
     } catch (e) {
-      toast({ title: 'Error', description: e.message || 'No se pudo guardar la oferta.', variant: 'destructive' });
+      toast({ title: 'Error', description: e.message || 'No se pudo aprobar la oferta.', variant: 'destructive' });
+    }
+  };
+
+  const handleRejectOffer = async () => {
+    try {
+      const op = statusOperation;
+      if (!op?._id) return;
+      await updateOperation(op._id, { estado: 'Oferta Rechazada' });
+      toast({ title: 'Oferta rechazada', description: 'La operación pasó a Oferta Rechazada.' });
+      setIsStatusOpen(false);
+      setStatusOperation(null);
+      fetchAndSet();
+    } catch (e) {
+      toast({ title: 'Error', description: e.message || 'No se pudo rechazar la oferta.', variant: 'destructive' });
     }
   };
 
@@ -373,11 +438,11 @@ const OperationsPage = () => {
         <CardContent>
           <AppliedFilters 
             filters={filters}
-            fields={[{ id: 'estado', label: 'Estado', type: 'select', options: ['Pendiente', 'Tarifa Seleccionada', 'Pendiente de Aprobación', 'En curso', 'Finalizada', 'Cancelada'] }]}
+            fields={[{ id: 'estado', label: 'Estado', type: 'select', options: ['Pendiente', 'Tarifa Seleccionada', 'Pendiente de Aprobación', 'Oferta enviada', 'Oferta Rechazada', 'En curso', 'Finalizada', 'Cancelada'] }]}
             onRemoveFilter={handleRemoveFilter}
           />
           <DataTable data={data} columns={operationsColumns} isLoading={isLoading} onAction={handleAction} page={currentPage} limit={itemsPerPage} totalRecords={totalItems} onPageChange={handlePageChange} onLimitChange={handleLimitChange} />
-          <FilterDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} fields={[{ id: 'estado', label: 'Estado', type: 'select', options: ['Pendiente', 'Tarifa Seleccionada', 'Pendiente de Aprobación', 'En curso', 'Finalizada', 'Cancelada'] }]} initialFilters={filters} onChange={handleFilterChange} onApply={handleFilterChange} />
+          <FilterDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} fields={[{ id: 'estado', label: 'Estado', type: 'select', options: ['Pendiente', 'Tarifa Seleccionada', 'Pendiente de Aprobación', 'Oferta enviada', 'Oferta Rechazada', 'En curso', 'Finalizada', 'Cancelada'] }]} initialFilters={filters} onChange={handleFilterChange} onApply={handleFilterChange} />
         </CardContent>
       </Card>
       <AnimatePresence>
@@ -435,6 +500,15 @@ const OperationsPage = () => {
             initialDraft={offerDraft}
             onSave={handleSaveOffer}
             readOnly={offerReadOnly}
+          />
+        )}
+        {isStatusOpen && (
+          <StatusModal
+            isOpen={isStatusOpen}
+            onClose={() => { setIsStatusOpen(false); setStatusOperation(null); }}
+            operation={statusOperation}
+            onApprove={handleApproveOffer}
+            onReject={handleRejectOffer}
           />
         )}
       </AnimatePresence>
