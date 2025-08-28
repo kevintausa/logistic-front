@@ -42,6 +42,7 @@ const OperationsPage = () => {
   const [isOfferOpen, setIsOfferOpen] = useState(false);
   const [offerOperation, setOfferOperation] = useState(null);
   const [offerDraft, setOfferDraft] = useState(null);
+  const [offerReadOnly, setOfferReadOnly] = useState(false);
 
   const fetchAndSet = useCallback(async () => {
     setIsLoading(true);
@@ -85,6 +86,112 @@ const OperationsPage = () => {
       handleCloseModal();
       fetchAndSet();
     }
+  };
+
+  // Renderizador documento formal para impresión/descarga (temporal)
+  const buildOfferPrintableHtml = (operation, offer) => {
+    const items = Array.isArray(offer.items) ? offer.items : [];
+    const fmt = (n) => (Number(n || 0)).toFixed(2);
+    const subtotalCot = items
+      .filter((it) => (it?.tipo || '').toLowerCase() === 'cotizacion')
+      .reduce((a, b) => a + Number(b.montoUsd || 0), 0);
+    const subtotalManual = items
+      .filter((it) => (it?.tipo || '').toLowerCase() !== 'cotizacion')
+      .reduce((a, b) => a + Number(b.montoUsd || 0), 0);
+    const total = subtotalCot + subtotalManual;
+
+    const rows = items
+      .map((it) => `
+        <tr>
+          <td class=\"tcell\">${it.grupo || ''}</td>
+          <td class=\"tcell\">${it.concepto || ''}</td>
+          <td class=\"tcell num\">$ ${fmt(it.montoUsd)}</td>
+        </tr>`)
+      .join('');
+
+    const cliente = operation?.cliente || {};
+    const clientName = cliente?.nombre || '';
+    const clientNit = cliente?.nit || cliente?.ruc || cliente?.documento || '';
+    const asesorName = operation?.asesorNombre || operation?.asesor?.nombre || '';
+    const asesorEmail = operation?.asesorCorreo || operation?.asesorEmail || operation?.asesor?.correo || '';
+    const notas = offer?.notas || '';
+    const logoUrl = `${window.location.origin}/logo.png`;
+
+    return `<!doctype html>
+    <html>
+    <head>
+      <meta charset=\"utf-8\"/>
+      <title>Oferta ${operation?.codigo || operation?._id || ''}</title>
+      <style>
+        *{box-sizing:border-box}
+        body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:32px;color:#111;background:#fff}
+        .header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px}
+        .brand{display:flex;align-items:center;gap:12px}
+        .brand img{height:42px;width:auto;object-fit:contain}
+        .brand .title{font-size:20px;font-weight:700}
+        .meta{font-size:12px;color:#444;text-align:right}
+        .section-title{font-size:14px;font-weight:600;margin:18px 0 8px;color:#222}
+        table{width:100%;border-collapse:collapse}
+        th{font-size:12px;text-align:left;color:#333;border-bottom:1px solid #ddd;padding:8px;background:#fafafa}
+        .tcell{font-size:12px;border-bottom:1px solid #eee;padding:8px;vertical-align:top}
+        .num{text-align:right}
+        .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        .card{border:1px solid #e5e7eb;border-radius:8px;padding:12px;background:#fff}
+        .label{font-size:11px;color:#6b7280;margin-bottom:4px}
+        .value{font-size:13px;font-weight:600;color:#111}
+        .totals{margin-top:10px;display:flex;flex-direction:column;gap:4px}
+        .totals .row{display:flex;justify-content:flex-end;gap:12px;font-size:13px}
+        .totals .row .k{color:#374151}
+        .totals .row .v{min-width:120px;text-align:right;font-weight:700}
+        .notes{white-space:pre-wrap;border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#fcfcfc;font-size:12px;color:#111}
+        .muted{color:#6b7280;font-size:12px}
+        @media print{body{padding:0} .header{margin-top:12px}}
+      </style>
+    </head>
+    <body>
+      <div class=\"header\">
+        <div class=\"brand\">
+          <img src=\"${logoUrl}\" alt=\"Logo\" onerror=\"this.style.display='none'\"/>
+          <div class=\"title\">Oferta</div>
+        </div>
+        <div class=\"meta\">
+          <div><strong>Operación:</strong> ${operation?.codigo || operation?._id || ''}</div>
+          <div>${new Date().toLocaleDateString()}</div>
+        </div>
+      </div>
+
+      <div class=\"grid\">
+        <div class=\"card\">
+          <div class=\"label\">Cliente</div>
+          <div class=\"value\">${clientName || '—'}</div>
+          <div class=\"muted\">NIT/RUC: ${clientNit || '—'}</div>
+        </div>
+        <div class=\"card\">
+          <div class=\"label\">Asesor</div>
+          <div class=\"value\">${asesorName || '—'}</div>
+          <div class=\"muted\">${asesorEmail || ''}</div>
+        </div>
+      </div>
+
+      <div class=\"section-title\">Conceptos</div>
+      <table>
+        <thead>
+          <tr><th>Grupo</th><th>Concepto</th><th class=\"num\">Monto (USD)</th></tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+
+      <div class=\"totals\">
+        <div class=\"row\"><div class=\"k\">Subtotal cotización</div><div class=\"v\">$ ${fmt(subtotalCot)}</div></div>
+        <div class=\"row\"><div class=\"k\">Subtotal manual</div><div class=\"v\">$ ${fmt(subtotalManual)}</div></div>
+        <div class=\"row\"><div class=\"k\"><strong>Total</strong></div><div class=\"v\"><strong>$ ${fmt(total)}</strong></div></div>
+      </div>
+
+      ${notas ? `<div class=\"section-title\">Notas</div><div class=\"notes\">${notas}</div>` : ''}
+    </body>
+    </html>`;
   };
 
   const handleSaveQuote = async (quoteData) => {
@@ -155,10 +262,62 @@ const OperationsPage = () => {
             draft = assembled?.data;
           }
           setOfferDraft(draft || { operationId: row._id, quoteId: row.cotizacionSeleccionadaId, items: [] });
+          setOfferReadOnly(false);
           setIsOfferOpen(true);
         } catch (e) {
           toast({ title: 'Error', description: e.message || 'No se pudo preparar la oferta.', variant: 'destructive' });
           setOfferOperation(null);
+        }
+        break;
+      case 'viewOffer':
+        try {
+          setOfferOperation(row);
+          const existing = await getOfferByOperation(row._id);
+          let draft = existing?.data;
+          if (!draft) {
+            if (!row.cotizacionSeleccionadaId) {
+              toast({ title: 'Oferta no disponible', description: 'Primero genera la oferta desde la cotización seleccionada.', variant: 'destructive' });
+              setOfferOperation(null);
+              return;
+            }
+            const assembled = await assembleOfferFromQuote(row._id, row.cotizacionSeleccionadaId);
+            draft = assembled?.data;
+          }
+          setOfferDraft(draft || { operationId: row._id, quoteId: row.cotizacionSeleccionadaId, items: [] });
+          setOfferReadOnly(true);
+          setIsOfferOpen(true);
+        } catch (e) {
+          toast({ title: 'Error', description: e.message || 'No se pudo cargar la oferta.', variant: 'destructive' });
+          setOfferOperation(null);
+        }
+        break;
+      case 'downloadOffer':
+        try {
+          // Obtener oferta (o ensamblarla temporalmente si no existe)
+          const existing = await getOfferByOperation(row._id);
+          let draft = existing?.data;
+          if (!draft && row.cotizacionSeleccionadaId) {
+            const assembled = await assembleOfferFromQuote(row._id, row.cotizacionSeleccionadaId);
+            draft = assembled?.data;
+          }
+          if (!draft) {
+            toast({ title: 'Sin oferta', description: 'Genera la oferta primero para poder descargarla.', variant: 'destructive' });
+            return;
+          }
+          // Render básico imprimible
+          const html = buildOfferPrintableHtml(row, draft);
+          const w = window.open('', '_blank');
+          if (w) {
+            w.document.open();
+            w.document.write(html);
+            w.document.close();
+            w.focus();
+            w.print();
+          } else {
+            toast({ title: 'Bloqueado por el navegador', description: 'Permite ventanas emergentes para descargar/imprimir.', variant: 'destructive' });
+          }
+        } catch (e) {
+          toast({ title: 'Error', description: e.message || 'No se pudo preparar la descarga.', variant: 'destructive' });
         }
         break;
       case 'status':
@@ -275,6 +434,7 @@ const OperationsPage = () => {
             operation={offerOperation}
             initialDraft={offerDraft}
             onSave={handleSaveOffer}
+            readOnly={offerReadOnly}
           />
         )}
       </AnimatePresence>

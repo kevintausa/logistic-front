@@ -26,7 +26,13 @@ export default function DocumentUpload({ ownerType, ownerId, onUploaded }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const appliesTo = ownerType === 'employee' ? 'empleado' : ownerType === 'laundry_center' ? 'centro' : undefined;
+        const appliesTo = ownerType === 'employee'
+          ? 'empleado'
+          : ownerType === 'laundry_center'
+          ? 'centro'
+          : ownerType === 'client'
+          ? 'cliente'
+          : undefined;
         const { data = [] } = await fetchDocumentTypes({ limit: 100, offset: 1, query: { estado: 'Activo' } });
         const filtered = appliesTo ? data.filter(dt => (dt.aplicaA === 'ambos') || (dt.aplicaA === appliesTo)) : data;
         setTypes(filtered);

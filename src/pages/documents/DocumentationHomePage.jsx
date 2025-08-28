@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
-import { Building2, Users, Folder, LayoutGrid, List } from 'lucide-react';
+import { Users, Folder, LayoutGrid, List } from 'lucide-react';
 import { useAuth, MODULES } from '@/contexts/AuthContext';
 import StorageUsageIndicator from '@/components/documents/StorageUsageIndicator';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,6 @@ import { Button } from '@/components/ui/button';
 export default function DocumentationHomePage() {
   const { hasPermission } = useAuth();
   const hasDocs = hasPermission(MODULES.DOCUMENTATION);
-  const canEmployees = hasDocs || hasPermission(MODULES.EMPLOYEES);
-  const canWorkplaces = hasDocs || hasPermission(MODULES.WORKPLACES);
   const [view, setView] = useState('grid'); // 'grid' | 'list'
 
   useEffect(() => {
@@ -58,34 +56,33 @@ export default function DocumentationHomePage() {
 
       {view === 'grid' ? (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {canEmployees && (
-            <Link to="/documentacion/empleados" className="group">
+          {hasDocs && (
+            <Link to="/documentacion/clientes" className="group">
               <Card className="transition-colors hover:bg-muted/50">
                 <CardContent className="p-5 flex items-center gap-4">
                   <div className="relative">
-                    <Folder className="h-12 w-12 text-yellow-500" />
+                    <Folder className="h-12 w-12 text-emerald-500" />
                     <Users className="h-4 w-4 text-foreground absolute -right-1 -bottom-1" />
                   </div>
                   <div>
-                    <div className="font-medium group-hover:text-primary">Empleados</div>
-                    <div className="text-xs text-muted-foreground">ARL, certificaciones, etc.</div>
+                    <div className="font-medium group-hover:text-primary">Clientes</div>
+                    <div className="text-xs text-muted-foreground">Contratos, RUT, certificados, etc.</div>
                   </div>
                 </CardContent>
               </Card>
             </Link>
           )}
 
-          {canWorkplaces && (
-            <Link to="/documentacion/centros" className="group">
+          {hasDocs && (
+            <Link to="/documentacion/general" className="group">
               <Card className="transition-colors hover:bg-muted/50">
                 <CardContent className="p-5 flex items-center gap-4">
                   <div className="relative">
                     <Folder className="h-12 w-12 text-blue-500" />
-                    <Building2 className="h-4 w-4 text-foreground absolute -right-1 -bottom-1" />
                   </div>
                   <div>
-                    <div className="font-medium group-hover:text-primary">Centros de Lavado</div>
-                    <div className="text-xs text-muted-foreground">Fichas técnicas y seguridad.</div>
+                    <div className="font-medium group-hover:text-primary">Documentación General</div>
+                    <div className="text-xs text-muted-foreground">Políticas, manuales, formatos, etc.</div>
                   </div>
                 </CardContent>
               </Card>
@@ -94,30 +91,29 @@ export default function DocumentationHomePage() {
         </div>
       ) : (
         <div className="divide-y rounded-md border">
-          {canEmployees && (
-            <Link to="/documentacion/empleados" className="block hover:bg-muted/40">
+          {hasDocs && (
+            <Link to="/documentacion/clientes" className="block hover:bg-muted/40">
               <div className="px-3 sm:px-4 py-3 flex items-center gap-3">
                 <div className="relative">
-                  <Folder className="h-6 w-6 text-yellow-500" />
+                  <Folder className="h-6 w-6 text-emerald-500" />
                   <Users className="h-3 w-3 text-foreground absolute -right-1 -bottom-1" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">Empleados</div>
-                  <div className="text-xs text-muted-foreground truncate">ARL, certificaciones, etc.</div>
+                  <div className="text-sm font-medium truncate">Clientes</div>
+                  <div className="text-xs text-muted-foreground truncate">Contratos, RUT, certificados, etc.</div>
                 </div>
               </div>
             </Link>
           )}
-          {canWorkplaces && (
-            <Link to="/documentacion/centros" className="block hover:bg-muted/40">
+          {hasDocs && (
+            <Link to="/documentacion/general" className="block hover:bg-muted/40">
               <div className="px-3 sm:px-4 py-3 flex items-center gap-3">
                 <div className="relative">
                   <Folder className="h-6 w-6 text-blue-500" />
-                  <Building2 className="h-3 w-3 text-foreground absolute -right-1 -bottom-1" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">Centros de Lavado</div>
-                  <div className="text-xs text-muted-foreground truncate">Fichas técnicas y seguridad.</div>
+                  <div className="text-sm font-medium truncate">Documentación General</div>
+                  <div className="text-xs text-muted-foreground truncate">Políticas, manuales, formatos, etc.</div>
                 </div>
               </div>
             </Link>
@@ -125,7 +121,7 @@ export default function DocumentationHomePage() {
         </div>
       )}
 
-      {!canEmployees && !canWorkplaces && (
+      {!hasDocs && (
         <div className="text-sm text-muted-foreground">No tienes permisos para ver módulos de Documentación.</div>
       )}
     </div>

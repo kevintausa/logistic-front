@@ -23,6 +23,9 @@ import EmployeeDocumentsPage from '@/pages/documents/EmployeeDocumentsPage';
 import DocumentationHomePage from '@/pages/documents/DocumentationHomePage';
 import EmployeesDocsHome from '@/pages/documents/EmployeesDocsHome';
 import CentersDocsHome from '@/pages/documents/CentersDocsHome';
+import ClientsDocsHome from '@/pages/documents/ClientsDocsHome';
+import ClientDocumentsPage from '@/pages/documents/ClientDocumentsPage';
+import GeneralDocumentsPage from '@/pages/documents/GeneralDocumentsPage';
 import DocumentTypesPage from '@/pages/parametrizacion/documentTypes/DocumentTypesPage';
 import OfferConceptsPage from '@/pages/parametrizacion/offer-concepts/OfferConceptsPage';
 
@@ -145,6 +148,21 @@ function AppContent() {
         <Route path="/documentacion" element={
           <ProtectedRoute requiredModule={MODULES.DOCUMENTATION}>
             <DocumentationHomePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/documentacion/clientes" element={
+          <ProtectedRoute requiredModule={MODULES.DOCUMENTATION}>
+            <ClientsDocsHome />
+          </ProtectedRoute>
+        } />
+        <Route path="/documentacion/clientes/:idCliente" element={
+          <ProtectedRoute requiredModule={MODULES.DOCUMENTATION}>
+            <ClientDocumentsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/documentacion/general" element={
+          <ProtectedRoute requiredModule={MODULES.DOCUMENTATION}>
+            <GeneralDocumentsPage />
           </ProtectedRoute>
         } />
         <Route path="/documentacion/empleados" element={

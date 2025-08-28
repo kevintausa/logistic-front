@@ -13,7 +13,7 @@ const toCurrency = (v) => {
 
 const rowBase = { tipo: 'manual', concepto: '', montoUsd: 0, grupo: 'transporte' };
 
-const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave }) => {
+const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, readOnly = false }) => {
   const { toast } = useToast();
   const [items, setItems] = useState([]);
   const [enableAduana, setEnableAduana] = useState(false);
@@ -195,14 +195,21 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave })
                 <input type="checkbox" checked readOnly /> Transporte internacional
               </label>
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={enableAduana} onChange={(e) => setEnableAduana(e.target.checked)} /> Gastos de Aduana (opcional)
+                <input type="checkbox" disabled={readOnly} checked={enableAduana} onChange={(e) => setEnableAduana(e.target.checked)} /> Gastos de Aduana (opcional)
               </label>
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={enableTerrestre} onChange={(e) => setEnableTerrestre(e.target.checked)} /> Transporte Terrestre (opcional)
+                <input type="checkbox" disabled={readOnly} checked={enableTerrestre} onChange={(e) => setEnableTerrestre(e.target.checked)} /> Transporte Terrestre (opcional)
               </label>
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={enableSeguro} onChange={(e) => setEnableSeguro(e.target.checked)} /> Seguros (opcional)
+                <input type="checkbox" disabled={readOnly} checked={enableSeguro} onChange={(e) => setEnableSeguro(e.target.checked)} /> Seguros (opcional)
               </label>
+            </div>
+
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div>
+                <div className="text-gray-500">Notas</div>
+                <Input disabled={readOnly} value={notas} onChange={(e) => setNotas(e.target.value)} />
+              </div>
             </div>
 
           {/* Sección: Transporte internacional */}
@@ -210,18 +217,20 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave })
             <div className="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs font-semibold">
               <div>Transporte internacional</div>
               <div className="flex items-center gap-2">
-                <select className="border rounded px-2 py-1 text-xs" value={selTransporte} onChange={(e) => setSelTransporte(e.target.value)}>
+                <select className="border rounded px-2 py-1 text-xs" disabled={readOnly} value={selTransporte} onChange={(e) => setSelTransporte(e.target.value)}>
                   <option value="">Seleccionar concepto</option>
                   {conceptsTransporte.map((c) => (
                     <option key={c._id || c.concepto} value={c._id}>{c.concepto} — ${toCurrency(c.montoUsd)} ({c.tipo})</option>
                   ))}
                 </select>
-                <Button size="sm" variant="outline" onClick={() => { const c = conceptsTransporte.find(x => String(x._id) === String(selTransporte)); addConcept(c); }}>Agregar</Button>
-                <Button size="sm" variant="outline" onClick={() => addManual('transporte')}>Agregar manual</Button>
-                <Button size="sm" variant="outline" onClick={() => toggleBulk('transporte')}>{bulkOpen.transporte ? 'Cerrar selección' : 'Agregar varios'}</Button>
+                {!readOnly && (<>
+                  <Button size="sm" variant="outline" onClick={() => { const c = conceptsTransporte.find(x => String(x._id) === String(selTransporte)); addConcept(c); }}>Agregar</Button>
+                  <Button size="sm" variant="outline" onClick={() => addManual('transporte')}>Agregar manual</Button>
+                  <Button size="sm" variant="outline" onClick={() => toggleBulk('transporte')}>{bulkOpen.transporte ? 'Cerrar selección' : 'Agregar varios'}</Button>
+                </>)}
               </div>
             </div>
-            {bulkOpen.transporte && (
+            {!readOnly && bulkOpen.transporte && (
               <div className="px-3 py-2 border-b bg-gray-50">
                 <div className="flex items-center gap-2 mb-2">
                   <Input className="h-8" placeholder="Buscar concepto" value={bulkSearch.transporte} onChange={(e) => setBulkSearch((s) => ({ ...s, transporte: e.target.value }))} />
@@ -253,15 +262,17 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave })
               {items.map((it, idx) => it.grupo === 'transporte' && (
                 <div key={idx} className="grid grid-cols-12 items-center px-3 py-2 border-b">
                   <div className="col-span-8">
-                    <Input value={it.concepto || ''} disabled={it.tipo === 'cotizacion'} onChange={(e) => updateItem(idx, { concepto: e.target.value })} placeholder="Concepto" />
+                    <Input value={it.concepto || ''} disabled={readOnly || it.tipo === 'cotizacion'} onChange={(e) => updateItem(idx, { concepto: e.target.value })} placeholder="Concepto" />
                   </div>
                   <div className="col-span-3">
-                    <Input className="text-right" value={toCurrency(it.montoUsd)} onChange={(e) => updateItem(idx, { montoUsd: e.target.value.replace(/,/g, '.') })} placeholder="0.00" />
+                    <Input className="text-right" value={toCurrency(it.montoUsd)} disabled={readOnly} onChange={(e) => updateItem(idx, { montoUsd: e.target.value.replace(/,/g, '.') })} placeholder="0.00" />
                   </div>
                   <div className="col-span-1 text-right">
-                    <Button variant="ghost" size="icon" aria-label="Eliminar" onClick={() => removeItem(idx)}>
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
+                    {!readOnly && (
+                      <Button variant="ghost" size="icon" aria-label="Eliminar" onClick={() => removeItem(idx)}>
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -274,18 +285,20 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave })
               <div className="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs font-semibold">
                 <div>Gastos de Aduana</div>
                 <div className="flex items-center gap-2">
-                  <select className="border rounded px-2 py-1 text-xs" value={selAduana} onChange={(e) => setSelAduana(e.target.value)}>
+                  <select className="border rounded px-2 py-1 text-xs" disabled={readOnly} value={selAduana} onChange={(e) => setSelAduana(e.target.value)}>
                     <option value="">Seleccionar concepto</option>
                     {conceptsAduana.map((c) => (
                       <option key={c._id || c.concepto} value={c._id}>{c.concepto} — ${toCurrency(c.montoUsd)} ({c.tipo})</option>
                     ))}
                   </select>
-                  <Button size="sm" variant="outline" onClick={() => { const c = conceptsAduana.find(x => String(x._id) === String(selAduana)); addConcept(c); }}>Agregar</Button>
-                  <Button size="sm" variant="outline" onClick={() => addManual('aduana')}>Agregar manual</Button>
-                  <Button size="sm" variant="outline" onClick={() => toggleBulk('aduana')}>{bulkOpen.aduana ? 'Cerrar selección' : 'Agregar varios'}</Button>
+                  {!readOnly && (<>
+                    <Button size="sm" variant="outline" onClick={() => { const c = conceptsAduana.find(x => String(x._id) === String(selAduana)); addConcept(c); }}>Agregar</Button>
+                    <Button size="sm" variant="outline" onClick={() => addManual('aduana')}>Agregar manual</Button>
+                    <Button size="sm" variant="outline" onClick={() => toggleBulk('aduana')}>{bulkOpen.aduana ? 'Cerrar selección' : 'Agregar varios'}</Button>
+                  </>)}
                 </div>
               </div>
-              {bulkOpen.aduana && (
+              {!readOnly && bulkOpen.aduana && (
                 <div className="px-3 py-2 border-b bg-gray-50">
                   <div className="flex items-center gap-2 mb-2">
                     <Input className="h-8" placeholder="Buscar concepto" value={bulkSearch.aduana} onChange={(e) => setBulkSearch((s) => ({ ...s, aduana: e.target.value }))} />
@@ -317,15 +330,17 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave })
                 {items.map((it, idx) => it.grupo === 'aduana' && (
                   <div key={idx} className="grid grid-cols-12 items-center px-3 py-2 border-b">
                     <div className="col-span-8">
-                      <Input value={it.concepto || ''} onChange={(e) => updateItem(idx, { concepto: e.target.value })} placeholder="Concepto" />
+                      <Input value={it.concepto || ''} disabled={readOnly} onChange={(e) => updateItem(idx, { concepto: e.target.value })} placeholder="Concepto" />
                     </div>
                     <div className="col-span-3">
-                      <Input className="text-right" value={toCurrency(it.montoUsd)} onChange={(e) => updateItem(idx, { montoUsd: e.target.value.replace(/,/g, '.') })} placeholder="0.00" />
+                      <Input className="text-right" value={toCurrency(it.montoUsd)} disabled={readOnly} onChange={(e) => updateItem(idx, { montoUsd: e.target.value.replace(/,/g, '.') })} placeholder="0.00" />
                     </div>
                     <div className="col-span-1 text-right">
-                      <Button variant="ghost" size="icon" aria-label="Eliminar" onClick={() => removeItem(idx)}>
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
+                      {!readOnly && (
+                        <Button variant="ghost" size="icon" aria-label="Eliminar" onClick={() => removeItem(idx)}>
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -339,18 +354,20 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave })
               <div className="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs font-semibold">
                 <div>Transporte Terrestre</div>
                 <div className="flex items-center gap-2">
-                  <select className="border rounded px-2 py-1 text-xs" value={selTerrestre} onChange={(e) => setSelTerrestre(e.target.value)}>
+                  <select className="border rounded px-2 py-1 text-xs" disabled={readOnly} value={selTerrestre} onChange={(e) => setSelTerrestre(e.target.value)}>
                     <option value="">Seleccionar concepto</option>
                     {conceptsTerrestre.map((c) => (
                       <option key={c._id || c.concepto} value={c._id}>{c.concepto} — ${toCurrency(c.montoUsd)} ({c.tipo})</option>
                     ))}
                   </select>
-                  <Button size="sm" variant="outline" onClick={() => { const c = conceptsTerrestre.find(x => String(x._id) === String(selTerrestre)); addConcept(c); }}>Agregar</Button>
-                  <Button size="sm" variant="outline" onClick={() => addManual('terrestre')}>Agregar manual</Button>
-                  <Button size="sm" variant="outline" onClick={() => toggleBulk('terrestre')}>{bulkOpen.terrestre ? 'Cerrar selección' : 'Agregar varios'}</Button>
+                  {!readOnly && (<>
+                    <Button size="sm" variant="outline" onClick={() => { const c = conceptsTerrestre.find(x => String(x._id) === String(selTerrestre)); addConcept(c); }}>Agregar</Button>
+                    <Button size="sm" variant="outline" onClick={() => addManual('terrestre')}>Agregar manual</Button>
+                    <Button size="sm" variant="outline" onClick={() => toggleBulk('terrestre')}>{bulkOpen.terrestre ? 'Cerrar selección' : 'Agregar varios'}</Button>
+                  </>)}
                 </div>
               </div>
-              {bulkOpen.terrestre && (
+              {!readOnly && bulkOpen.terrestre && (
                 <div className="px-3 py-2 border-b bg-gray-50">
                   <div className="flex items-center gap-2 mb-2">
                     <Input className="h-8" placeholder="Buscar concepto" value={bulkSearch.terrestre} onChange={(e) => setBulkSearch((s) => ({ ...s, terrestre: e.target.value }))} />
@@ -382,15 +399,17 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave })
                 {items.map((it, idx) => it.grupo === 'terrestre' && (
                   <div key={idx} className="grid grid-cols-12 items-center px-3 py-2 border-b">
                     <div className="col-span-8">
-                      <Input value={it.concepto || ''} onChange={(e) => updateItem(idx, { concepto: e.target.value })} placeholder="Concepto" />
+                      <Input value={it.concepto || ''} disabled={readOnly} onChange={(e) => updateItem(idx, { concepto: e.target.value })} placeholder="Concepto" />
                     </div>
                     <div className="col-span-3">
-                      <Input className="text-right" value={toCurrency(it.montoUsd)} onChange={(e) => updateItem(idx, { montoUsd: e.target.value.replace(/,/g, '.') })} placeholder="0.00" />
+                      <Input className="text-right" value={toCurrency(it.montoUsd)} disabled={readOnly} onChange={(e) => updateItem(idx, { montoUsd: e.target.value.replace(/,/g, '.') })} placeholder="0.00" />
                     </div>
                     <div className="col-span-1 text-right">
-                      <Button variant="ghost" size="icon" aria-label="Eliminar" onClick={() => removeItem(idx)}>
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
+                      {!readOnly && (
+                        <Button variant="ghost" size="icon" aria-label="Eliminar" onClick={() => removeItem(idx)}>
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -404,18 +423,20 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave })
               <div className="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs font-semibold">
                 <div>Seguros</div>
                 <div className="flex items-center gap-2">
-                  <select className="border rounded px-2 py-1 text-xs" value={selSeguro} onChange={(e) => setSelSeguro(e.target.value)}>
+                  <select className="border rounded px-2 py-1 text-xs" disabled={readOnly} value={selSeguro} onChange={(e) => setSelSeguro(e.target.value)}>
                     <option value="">Seleccionar concepto</option>
                     {conceptsSeguro.map((c) => (
                       <option key={c._id || c.concepto} value={c._id}>{c.concepto} — ${toCurrency(c.montoUsd)} ({c.tipo})</option>
                     ))}
                   </select>
-                  <Button size="sm" variant="outline" onClick={() => { const c = conceptsSeguro.find(x => String(x._id) === String(selSeguro)); addConcept(c); }}>Agregar</Button>
-                  <Button size="sm" variant="outline" onClick={() => addManual('seguro')}>Agregar manual</Button>
-                  <Button size="sm" variant="outline" onClick={() => toggleBulk('seguro')}>{bulkOpen.seguro ? 'Cerrar selección' : 'Agregar varios'}</Button>
+                  {!readOnly && (<>
+                    <Button size="sm" variant="outline" onClick={() => { const c = conceptsSeguro.find(x => String(x._id) === String(selSeguro)); addConcept(c); }}>Agregar</Button>
+                    <Button size="sm" variant="outline" onClick={() => addManual('seguro')}>Agregar manual</Button>
+                    <Button size="sm" variant="outline" onClick={() => toggleBulk('seguro')}>{bulkOpen.seguro ? 'Cerrar selección' : 'Agregar varios'}</Button>
+                  </>)}
                 </div>
               </div>
-              {bulkOpen.seguro && (
+              {!readOnly && bulkOpen.seguro && (
                 <div className="px-3 py-2 border-b bg-gray-50">
                   <div className="flex items-center gap-2 mb-2">
                     <Input className="h-8" placeholder="Buscar concepto" value={bulkSearch.seguro} onChange={(e) => setBulkSearch((s) => ({ ...s, seguro: e.target.value }))} />
@@ -447,15 +468,17 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave })
                 {items.map((it, idx) => it.grupo === 'seguro' && (
                   <div key={idx} className="grid grid-cols-12 items-center px-3 py-2 border-b">
                     <div className="col-span-8">
-                      <Input value={it.concepto || ''} disabled={it.tipo === 'cotizacion'} onChange={(e) => updateItem(idx, { concepto: e.target.value })} placeholder="Concepto" />
+                      <Input value={it.concepto || ''} disabled={readOnly || it.tipo === 'cotizacion'} onChange={(e) => updateItem(idx, { concepto: e.target.value })} placeholder="Concepto" />
                     </div>
                     <div className="col-span-3">
-                      <Input className="text-right" value={toCurrency(it.montoUsd)} onChange={(e) => updateItem(idx, { montoUsd: e.target.value.replace(/,/g, '.') })} placeholder="0.00" />
+                      <Input className="text-right" value={toCurrency(it.montoUsd)} disabled={readOnly} onChange={(e) => updateItem(idx, { montoUsd: e.target.value.replace(/,/g, '.') })} placeholder="0.00" />
                     </div>
                     <div className="col-span-1 text-right">
-                      <Button variant="ghost" size="icon" aria-label="Eliminar" onClick={() => removeItem(idx)}>
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
+                      {!readOnly && (
+                        <Button variant="ghost" size="icon" aria-label="Eliminar" onClick={() => removeItem(idx)}>
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -474,13 +497,13 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave })
 
           <div className="mt-4">
             <div className="text-sm text-gray-500 mb-1">Notas</div>
-            <Input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Notas para el cliente" />
+            <Input value={notas} disabled={readOnly} onChange={(e) => setNotas(e.target.value)} placeholder="Notas para el cliente" />
           </div>
           </div>
 
           <div className="mt-4 pt-3 border-t flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSave}>Guardar Oferta</Button>
+            <Button variant="outline" onClick={onClose}>{readOnly ? 'Cerrar' : 'Cancelar'}</Button>
+            {!readOnly && <Button onClick={handleSave}>Guardar Oferta</Button>}
           </div>
         </motion.div>
       </motion.div>

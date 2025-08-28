@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, Edit, Trash, Check, AlertCircle, LogOut, FileText, Tag, ListChecks, Lock, Ban, Plus } from 'lucide-react';
+import { Eye, Edit, Trash, Check, AlertCircle, LogOut, FileText, Tag, ListChecks, Lock, Ban, Plus, Download } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Pagination from './Pagination';
 import { Button } from '@/components/ui/button';
@@ -110,6 +110,7 @@ const DataTable = ({ data, columns, isLoading, onAction, page, limit, totalRecor
                           case 'Lock': Icon = Lock; break;
                           case 'Ban': Icon = Ban; break;
                           case 'Plus': Icon = Plus; break;
+                          case 'Download': Icon = Download; break;
                           default: Icon = Edit;
                         }
                         // Permitir 'key' o 'id' como identificador de acción
