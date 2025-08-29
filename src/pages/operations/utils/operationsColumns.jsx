@@ -3,9 +3,6 @@ export const operationsColumns = [
   { id: 'estado', label: 'Estado', accessor: (row) => row.estado, sortable: true },
   { id: 'clienteNombre', label: 'Cliente', accessor: (row) => row.cliente?.nombre || row.clienteNombre || (typeof row.cliente === 'string' ? row.cliente : row.cliente?.id), sortable: true },
   { id: 'tipoOperacion', label: 'Tipo Operación', accessor: (row) => row.tipoOperacion?.nombre || row.tipoOperacion?.id },
-  { id: 'via', label: 'Vía', accessor: (row) => row.via?.nombre || row.via?.id },
-  { id: 'puertoCarga', label: 'Puerto Carga', accessor: (row) => row.puertoCarga?.nombre || row.puertoCarga?.id },
-  { id: 'puertoDescarga', label: 'Puerto Descarga', accessor: (row) => row.puertoDescarga?.nombre || row.puertoDescarga?.id },
   { id: 'asesorNombre', label: 'Asesor', accessor: (row) => row.asesorNombre || row.asesorId },
   { id: 'trazabilidadPct', label: 'Trazabilidad', accessor: (row) => `${row.trazabilidadPct ?? 0}%` },
   { id: 'actions', label: 'Acciones', type: 'actions', actions: [
@@ -28,7 +25,6 @@ export const columnsExcel = [
   { header: 'Estado', key: 'estado' },
   { header: 'Cliente', key: 'clienteNombre' },
   { header: 'Tipo Operación', key: 'tipoOperacionNombre' },
-  { header: 'Vía', key: 'viaNombre' },
   { header: 'Puerto Carga', key: 'puertoCargaNombre' },
   { header: 'Puerto Descarga', key: 'puertoDescargaNombre' },
   { header: 'Asesor', key: 'asesorNombre' },

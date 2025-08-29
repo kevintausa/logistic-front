@@ -6,8 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { fetchVias } from '@/pages/parametrizacion/vias/Services/vias.services';
-import { fetchOperationTypes } from '@/pages/parametrizacion/operation-types/Services/operation-types.services';
+// Vía eliminada: no se requiere fetch de vías
 import { fetchUsers } from '@/pages/parametrizacion/usuarios/Services/users.services';
 import { fetchClients } from '@/pages/parametrizacion/clients/Services/clients.services';
 import { fetchLoadingPorts } from '@/pages/parametrizacion/loading-ports/Services/loading-ports.services';
@@ -23,7 +22,7 @@ import { countries, countriesMap } from '@/data/countries';
 const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operación' }) => {
   const [form, setForm] = useState({});
   const [errors, setErrors] = useState({});
-  const [catalogs, setCatalogs] = useState({ vias: [], tipos: [], asesores: [] });
+  const [catalogs, setCatalogs] = useState({ tipos: [], asesores: [] });
   const [loadingCatalogs, setLoadingCatalogs] = useState(false);
   const [suggestions, setSuggestions] = useState({ puertosCarga: [], puertosDescarga: [] });
   const [loadingSuggest, setLoadingSuggest] = useState({ cliente: false, puertoCarga: false, puertoDescarga: false, paisOrigen: false, ciudadOrigen: false, paisDestino: false, ciudadDestino: false });
@@ -37,7 +36,6 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
     const initial = item || {
       cliente: { id: '', nombre: '', nit: '' },
       tipoOperacion: { id: '', nombre: '' },
-      via: { id: '', nombre: '' },
       puertoCarga: { id: '', nombre: '' },
       puertoDescarga: { id: '', nombre: '' },
       incoterm: '', piezas: '', pesoKg: '', m3: '', descripcion: '',
@@ -49,15 +47,23 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
     const loadCatalogs = async () => {
       try {
         setLoadingCatalogs(true);
-        const [viasRes, tiposRes, asesoresRes] = await Promise.all([
-          fetchVias({ limit: 50, offset: 1, query: {} }),
-          fetchOperationTypes({ limit: 50, offset: 1, query: {} }),
+        const [asesoresRes] = await Promise.all([
           fetchUsers({ limit: 50, offset: 1, query: { rol: 'asesor' } }),
         ]);
-        const vias = viasRes?.data?.items || viasRes?.items || viasRes?.data || [];
-        const tipos = tiposRes?.data?.items || tiposRes?.items || tiposRes?.data || [];
+  
+        const tipos = [
+          { id: 'agenciamiento_aduanero', nombre: 'Agenciamiento aduanero' },
+          { id: 'transporte_terrestre', nombre: 'Transporte terrestre' },
+          { id: 'importacion_lcl', nombre: 'Importación LCL' },
+          { id: 'importacion_fcl', nombre: 'Importación FCL' },
+          { id: 'exportacion_lcl', nombre: 'Exportación LCL' },
+          { id: 'exportacion_fcl', nombre: 'Exportación FCL' },
+          { id: 'importacion_aerea', nombre: 'Importación Aérea' },
+          { id: 'exportacion_aerea', nombre: 'Exportación Aérea' },
+          { id: 'triangulacion', nombre: 'Triangulación' },
+        ];
         const asesores = asesoresRes?.data?.items || asesoresRes?.items || asesoresRes?.data || [];
-        setCatalogs({ vias, tipos, asesores });
+        setCatalogs({ tipos, asesores });
       } catch (e) {
         console.error('Error cargando catálogos', e);
       } finally {
@@ -76,8 +82,6 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
     if (!form?.cliente?.nombre) e['cliente.nombre'] = 'Cliente Nombre es requerido';
     if (!form?.tipoOperacion?.id) e['tipoOperacion.id'] = 'Tipo Operación ID es requerido';
     if (!form?.tipoOperacion?.nombre) e['tipoOperacion.nombre'] = 'Tipo Operación es requerido';
-    if (!form?.via?.id) e['via.id'] = 'Vía ID es requerido';
-    if (!form?.via?.nombre) e['via.nombre'] = 'Vía es requerida';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -101,13 +105,46 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!requiredChecks()) return;
-    // Normaliza numéricos
+    // Normaliza numéricos (acepta valores con comas para miles)
+    const toNum = (v) => {
+      if (v === '' || v === undefined || v === null) return undefined;
+      if (typeof v === 'string') {
+        const cleaned = v.replace(/,/g, '');
+        const num = Number(cleaned);
+        return Number.isNaN(num) ? undefined : num;
+      }
+      return Number(v);
+    };
+    const esp = form.especifico || {};
+    const det = esp.detalles || {};
     const payload = {
       ...form,
-      piezas: form.piezas === '' ? undefined : Number(form.piezas),
-      pesoKg: form.pesoKg === '' ? undefined : Number(form.pesoKg),
-      m3: form.m3 === '' ? undefined : Number(form.m3),
+      piezas: toNum(form.piezas),
+      pesoKg: toNum(form.pesoKg),
+      m3: toNum(form.m3),
+      especifico: {
+        ...esp,
+        valorMercancia: toNum(esp.valorMercancia),
+        numeroContenedores: toNum(esp.numeroContenedores),
+        detalles: {
+          ...det,
+          piezas: toNum(det.piezas),
+          largo: toNum(det.largo),
+          ancho: toNum(det.ancho),
+          alto: toNum(det.alto),
+          peso: toNum(det.peso),
+        },
+      },
     };
+    // Si es agenciamiento aduanero, no enviar origen/destino ni puertos
+    const tipoId = (form?.tipoOperacion?.id || '').toLowerCase();
+    if (tipoId === 'agenciamiento_aduanero') {
+      payload.origen = undefined;
+      payload.destino = undefined;
+      payload.puertoCarga = undefined;
+      payload.puertoDescarga = undefined;
+      payload.incoterm = undefined;
+    }
     onSave(payload);
   };
 
@@ -117,16 +154,13 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
     debounceRef.current[key] = setTimeout(fn, delay);
   };
 
-  // Prefetch puertos for a given scope ('origen' | 'destino') using selected país and vía
-  // viaOverride: 'aerea' | 'maritima' (optional)
-  const fetchPortsForScope = async (scope, viaOverride) => {
+  // Prefetch puertos for a given scope ('origen' | 'destino') using selected país and tipo de operación
+  const fetchPortsForScope = async (scope) => {
     try {
-      const viaNombre = viaOverride
-        ? (viaOverride === 'aerea' ? 'aérea' : 'marítima')
-        : (form?.via?.nombre || '').toLowerCase();
-      let tipoFiltro = undefined;
-      if (viaNombre.includes('érea') || viaNombre.includes('aerea')) tipoFiltro = 'aeropuerto';
-      else if (viaNombre.includes('marít') || viaNombre.includes('marit')) tipoFiltro = 'puerto';
+      const tipoId = (form?.tipoOperacion?.id || '').toLowerCase();
+      let tipoFiltro = undefined; // aeropuerto | puerto | undefined
+      if (tipoId.includes('aerea')) tipoFiltro = 'aeropuerto';
+      else if (tipoId.includes('fcl') || tipoId.includes('lcl')) tipoFiltro = 'puerto';
       const paisSel = form?.[scope]?.pais || '';
       if (!paisSel && !tipoFiltro) return;
       const base = { ...(tipoFiltro ? { tipo: tipoFiltro } : {}) };
@@ -187,11 +221,11 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
     setLoadingSuggest(prev => ({ ...prev, [suggestKey]: true }));
     debounce(`port-${key}`, async () => {
       try {
-        // Determinar tipo según vía
-        const viaNombre = (form?.via?.nombre || '').toLowerCase();
-        let tipoFiltro = undefined;
-        if (viaNombre.includes('érea') || viaNombre.includes('aerea')) tipoFiltro = 'aeropuerto';
-        else if (viaNombre.includes('marít') || viaNombre.includes('marit')) tipoFiltro = 'puerto';
+        // Determinar tipo según tipo de operación
+        const tipoId = (form?.tipoOperacion?.id || '').toLowerCase();
+        let tipoFiltro = undefined; // aeropuerto | puerto | undefined
+        if (tipoId.includes('aerea')) tipoFiltro = 'aeropuerto';
+        else if (tipoId.includes('fcl') || tipoId.includes('lcl')) tipoFiltro = 'puerto';
         // Filtros por país según si es carga o descarga (ciudad es opcional y NO filtra puertos)
         const scope = fieldBase === 'puertoCarga' ? 'origen' : 'destino';
         const paisSel = form?.[scope]?.pais || '';
@@ -247,7 +281,323 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
   };
 
   // Helpers
-  const unique = (arr) => Array.from(new Set(arr.filter(Boolean)));
+
+// Defaults por tipo de operación
+const getDefaultsForType = (tipoId) => {
+  switch (tipoId) {
+    case 'agenciamiento_aduanero':
+      return { partidaArancelaria: '', valorMercancia: '', uso: '', tipoMercancia: 'general', moneda: 'USD' };
+    case 'transporte_terrestre':
+      return { valorMercancia: '', moneda: 'USD', detalles: { piezas: '', largo: '', ancho: '', alto: '', peso: '', tipo: 'pallet', unidadMedida: 'cm' }, apilable: false };
+    case 'importacion_lcl':
+    case 'exportacion_lcl':
+      return { valorMercancia: '', moneda: 'USD', detalles: { piezas: '', largo: '', ancho: '', alto: '', peso: '', tipo: 'pallet', unidadMedida: 'cm' }, apilable: false };
+    case 'importacion_fcl':
+    case 'exportacion_fcl':
+      return { valorMercancia: '', moneda: 'USD', numeroContenedores: '', detalles: { tipoContenedor: '20_pies', peso: '', tipo: 'pallet' } };
+    case 'importacion_aerea':
+    case 'exportacion_aerea':
+      return { detalles: { piezas: '', largo: '', ancho: '', alto: '', peso: '', unidadMedida: 'cm' }, tipoMercancia: 'general', apilable: false };
+    default:
+      return {};
+  }
+};
+
+  const renderTypeSpecific = () => {
+    const t = form?.tipoOperacion?.id;
+    const esp = form?.especifico || {};
+    const det = esp.detalles || {};
+    if (!t) return null;
+    // UI helpers
+    const SelectSimple = ({ value, onValueChange, options, placeholder }) => (
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map(opt => (
+            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+
+    // Helpers para dinero: formato con comas y parsing básico
+    const formatNumberWithCommas = (val) => {
+      if (val === undefined || val === null) return '';
+      const str = String(val);
+      if (!str) return '';
+      const cleaned = str.replace(/[^0-9.]/g, '');
+      const [intPart, decPart] = cleaned.split('.');
+      const withCommas = intPart ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+      return decPart !== undefined ? `${withCommas}.${decPart}` : withCommas;
+    };
+
+    const onMoneyInput = (path, raw) => {
+      const formatted = formatNumberWithCommas(raw);
+      handleChange(path, formatted);
+    };
+
+    const tipoBultoOpts = [
+      { value: 'pallet', label: 'Pallet' },
+      { value: 'cajas', label: 'Cajas' },
+      { value: 'drum', label: 'Drum' },
+      { value: 'crates', label: 'Crates' },
+      { value: 'otro', label: 'Otro' },
+    ];
+    const tipoMercanciaOpts = [
+      { value: 'general', label: 'General' },
+      { value: 'peligroso', label: 'Peligroso' },
+      { value: 'perecedero', label: 'Perecedero' },
+      { value: 'otro', label: 'Otro' },
+    ];
+    const tipoContenedorOpts = [
+      { value: '20_pies', label: '20 pies' },
+      { value: '40_pies', label: '40 pies' },
+      { value: 'open_top', label: 'Open Top' },
+      { value: 'flat_rack', label: 'Flat Rack' },
+    ];
+
+    // Agenciamiento aduanero
+    if (t === 'agenciamiento_aduanero') {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <Label>Partida arancelaria</Label>
+            <Input value={esp.partidaArancelaria || ''} onChange={(e) => handleChange('especifico.partidaArancelaria', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+          </div>
+          <div className="md:col-span-2">
+            <Label>Valor de la mercancía</Label>
+            <div className="flex gap-2 items-center">
+              <Input
+                inputMode="decimal"
+                value={formatNumberWithCommas(esp.valorMercancia ?? '')}
+                onChange={(e) => onMoneyInput('especifico.valorMercancia', e.target.value)}
+                placeholder="0"
+                className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 text-base py-2.5"
+              />
+              <div className="min-w-[140px]">
+                <SelectSimple
+                  value={esp.moneda || 'USD'}
+                  onValueChange={(v) => handleChange('especifico.moneda', v)}
+                  options={[
+                    { value: 'USD', label: 'USD' },
+                    { value: 'EUR', label: 'EUR' },
+                    { value: 'COP', label: 'COP' },
+                    { value: 'GBP', label: 'GBP' },
+                  ]}
+                  placeholder="Moneda"
+                />
+              </div>
+            </div>
+          </div>
+          <div>
+            <Label>Uso</Label>
+            <Input value={esp.uso || ''} onChange={(e) => handleChange('especifico.uso', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+          </div>
+          <div>
+            <Label>Tipo de mercancía</Label>
+            <SelectSimple
+              value={esp.tipoMercancia || 'general'}
+              onValueChange={(v) => handleChange('especifico.tipoMercancia', v)}
+              options={tipoMercanciaOpts}
+              placeholder="Selecciona tipo"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // Terrestre y LCL comparten estructura base (incoterm solo en LCL)
+    if (t === 'transporte_terrestre' || t === 'importacion_lcl' || t === 'exportacion_lcl') {
+      return (
+        <div className="space-y-4">
+          {t !== 'transporte_terrestre' && (
+            <div>
+              <Label>Incoterm</Label>
+              <Input value={form?.incoterm || ''} onChange={(e) => handleChange('incoterm', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-2">
+              <Label>Valor de la mercancía</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  inputMode="decimal"
+                  value={formatNumberWithCommas(esp.valorMercancia ?? '')}
+                  onChange={(e) => onMoneyInput('especifico.valorMercancia', e.target.value)}
+                  placeholder="0"
+                  className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 text-base py-2.5"
+                />
+                <div className="min-w-[140px]">
+                  <SelectSimple
+                    value={esp.moneda || 'USD'}
+                    onValueChange={(v) => handleChange('especifico.moneda', v)}
+                    options={[
+                      { value: 'USD', label: 'USD' },
+                      { value: 'EUR', label: 'EUR' },
+                      { value: 'COP', label: 'COP' },
+                      { value: 'GBP', label: 'GBP' },
+                    ]}
+                    placeholder="Moneda"
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label>Piezas</Label>
+              <Input type="number" value={det.piezas ?? ''} onChange={(e) => handleChange('especifico.detalles.piezas', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+            </div>
+            <div className="md:col-span-3">
+              <Label>Detalles</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                <Input type="number" placeholder="Largo" aria-label="Largo" value={det.largo ?? ''} onChange={(e) => handleChange('especifico.detalles.largo', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+                <Input type="number" placeholder="Ancho" aria-label="Ancho" value={det.ancho ?? ''} onChange={(e) => handleChange('especifico.detalles.ancho', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+                <Input type="number" placeholder="Alto" aria-label="Alto" value={det.alto ?? ''} onChange={(e) => handleChange('especifico.detalles.alto', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+                <SelectSimple
+                  value={det.unidadMedida || 'cm'}
+                  onValueChange={(v) => handleChange('especifico.detalles.unidadMedida', v)}
+                  options={[
+                    { value: 'cm', label: 'cm' },
+                    { value: 'm', label: 'metros' },
+                    { value: 'ft', label: 'pies' },
+                  ]}
+                  placeholder="Unidad"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Peso</Label>
+              <Input type="number" value={det.peso ?? ''} onChange={(e) => handleChange('especifico.detalles.peso', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+            </div>
+            <div>
+              <Label>Tipo</Label>
+              <SelectSimple
+                value={det.tipo || 'pallet'}
+                onValueChange={(v) => handleChange('especifico.detalles.tipo', v)}
+                options={tipoBultoOpts}
+                placeholder="Selecciona tipo"
+              />
+            </div>
+            <div className="flex items-center gap-2 md:col-span-2">
+              <input id="apilable" type="checkbox" checked={!!esp.apilable} onChange={(e) => handleChange('especifico.apilable', e.target.checked)} />
+              <Label htmlFor="apilable">Apilable</Label>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // FCL
+    if (t === 'importacion_fcl' || t === 'exportacion_fcl') {
+      return (
+        <div className="space-y-4">
+          <div>
+            <Label>Incoterm</Label>
+            <Input value={form?.incoterm || ''} onChange={(e) => handleChange('incoterm', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-2">
+              <Label>Valor de la mercancía</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  inputMode="decimal"
+                  value={formatNumberWithCommas(esp.valorMercancia ?? '')}
+                  onChange={(e) => onMoneyInput('especifico.valorMercancia', e.target.value)}
+                  placeholder="0"
+                  className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500 text-base py-2.5"
+                />
+                <div className="min-w-[140px]">
+                  <SelectSimple
+                    value={esp.moneda || 'USD'}
+                    onValueChange={(v) => handleChange('especifico.moneda', v)}
+                    options={[
+                      { value: 'USD', label: 'USD' },
+                      { value: 'EUR', label: 'EUR' },
+                      { value: 'COP', label: 'COP' },
+                      { value: 'GBP', label: 'GBP' },
+                    ]}
+                    placeholder="Moneda"
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label>Número de contenedores</Label>
+              <Input type="number" value={esp.numeroContenedores ?? ''} onChange={(e) => handleChange('especifico.numeroContenedores', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+            </div>
+            <div>
+              <Label>Tipo contenedor</Label>
+              <SelectSimple
+                value={det.tipoContenedor || '20_pies'}
+                onValueChange={(v) => handleChange('especifico.detalles.tipoContenedor', v)}
+                options={tipoContenedorOpts}
+                placeholder="Selecciona tipo contenedor"
+              />
+            </div>
+            <div>
+              <Label>Peso</Label>
+              <Input type="number" value={det.peso ?? ''} onChange={(e) => handleChange('especifico.detalles.peso', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+            </div>
+            <div>
+              <Label>Tipo</Label>
+              <SelectSimple
+                value={det.tipo || 'pallet'}
+                onValueChange={(v) => handleChange('especifico.detalles.tipo', v)}
+                options={tipoBultoOpts}
+                placeholder="Selecciona tipo"
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Aérea
+    if (t === 'importacion_aerea' || t === 'exportacion_aerea') {
+      return (
+        <div className="space-y-4">
+          <div>
+            <Label>Incoterm</Label>
+            <Input value={form?.incoterm || ''} onChange={(e) => handleChange('incoterm', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <Label>Piezas</Label>
+              <Input type="number" value={det.piezas ?? ''} onChange={(e) => handleChange('especifico.detalles.piezas', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+            </div>
+            <div className="md:col-span-3">
+              <Label>Detalles</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <Input type="number" placeholder="Largo" aria-label="Largo" value={det.largo ?? ''} onChange={(e) => handleChange('especifico.detalles.largo', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+                <Input type="number" placeholder="Ancho" aria-label="Ancho" value={det.ancho ?? ''} onChange={(e) => handleChange('especifico.detalles.ancho', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+                <Input type="number" placeholder="Alto" aria-label="Alto" value={det.alto ?? ''} onChange={(e) => handleChange('especifico.detalles.alto', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+              </div>
+            </div>
+            <div>
+              <Label>Peso</Label>
+              <Input type="number" value={det.peso ?? ''} onChange={(e) => handleChange('especifico.detalles.peso', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+            </div>
+            <div>
+              <Label>Tipo de mercancía</Label>
+              <SelectSimple
+                value={esp.tipoMercancia || 'general'}
+                onValueChange={(v) => handleChange('especifico.tipoMercancia', v)}
+                options={tipoMercanciaOpts}
+                placeholder="Selecciona tipo"
+              />
+            </div>
+            <div className="flex items-center gap-2 md:col-span-2">
+              <input id="apilable" type="checkbox" checked={!!esp.apilable} onChange={(e) => handleChange('especifico.apilable', e.target.checked)} />
+              <Label htmlFor="apilable">Apilable</Label>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   // País (origen/destino) con sugerencias locales
   const onPaisChange = (scope, value) => {
@@ -339,16 +689,25 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
             </div>
           </div>
 
-          {/* Tipo Operación y Vía en la misma fila */}
+          {/* Tipo de operación */}
           <div className="md:col-span-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
               <div>
                 <Label>Tipo Operación *</Label>
                 <Select
                   value={form?.tipoOperacion?.id || ''}
                   onValueChange={(val) => {
                     const selected = catalogs.tipos.find(t => (t._id || t.id) === val);
-                    setForm(prev => ({ ...prev, tipoOperacion: { id: val, nombre: selected?.nombre || selected?.name || '' } }));
+                    setForm(prev => ({
+                      ...prev,
+                      tipoOperacion: { id: val, nombre: selected?.nombre || selected?.name || '' },
+                      especifico: getDefaultsForType(val),
+                      ...(val === 'agenciamiento_aduanero'
+                        ? { origen: undefined, destino: undefined, puertoCarga: undefined, puertoDescarga: undefined, incoterm: undefined }
+                        : {}),
+                    }));
+                    // limpiar sugerencias de puertos al cambiar el tipo (por si cambia el modo a aéreo/marítimo)
+                    setSuggestions(prev => ({ ...prev, puertosCarga: [], puertosDescarga: [] }));
                   }}
                 >
                   <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
@@ -362,42 +721,11 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
                 </Select>
                 {errors['tipoOperacion.nombre'] && <p className="text-sm text-destructive">{errors['tipoOperacion.nombre']}</p>}
               </div>
-              <div>
-                <Label>Vía *</Label>
-                <Select
-                  value={form?.via?.id || ''}
-                  onValueChange={(val) => {
-                    const nombre = val === 'aerea' ? 'Aérea' : 'Marítima';
-                    const hasPaisOrigen = !!(form?.origen?.pais);
-                    const hasPaisDestino = !!(form?.destino?.pais);
-                    // Actualiza vía y limpia selección de puertos
-                    setForm(prev => ({
-                      ...prev,
-                      via: { id: val, nombre },
-                      puertoCarga: { id: '', nombre: '' },
-                      puertoDescarga: { id: '', nombre: '' },
-                    }));
-                    // limpiar sugerencias de puertos al cambiar vía
-                    setSuggestions(prev => ({ ...prev, puertosCarga: [], puertosDescarga: [] }));
-                    // Prefetch según el país y la nueva vía
-                    if (hasPaisOrigen) fetchPortsForScope('origen', val);
-                    if (hasPaisDestino) fetchPortsForScope('destino', val);
-                  }}
-                >
-                  <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
-                    <SelectValue placeholder={loadingCatalogs ? 'Cargando...' : 'Seleccionar vía'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="aerea">Aérea</SelectItem>
-                    <SelectItem value="maritima">Marítima</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors['via.nombre'] && <p className="text-sm text-destructive">{errors['via.nombre']}</p>}
-              </div>
             </div>
           </div>
 
           {/* Origen */}
+          {form?.tipoOperacion?.id !== 'agenciamiento_aduanero' && (
           <div className="md:col-span-2">
             <h3 className="text-sm font-semibold mb-2 text-blue-600">Origen</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -468,8 +796,10 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
               </div>
             </div>
           </div>
+          )}
 
           {/* Destino */}
+          {form?.tipoOperacion?.id !== 'agenciamiento_aduanero' && (
           <div className="md:col-span-2">
             <h3 className="text-sm font-semibold mb-2 text-blue-600">Destino</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -540,36 +870,20 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
               </div>
             </div>
           </div>
+          )}
 
-          {/* Datos del embarque */}
+          {/* Datos según tipo de operación */}
           <div className="md:col-span-2">
-            <h3 className="text-sm font-semibold mb-2 text-blue-600">Datos del embarque</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <Label>Incoterm</Label>
-                <Input className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" value={form?.incoterm || ''} onChange={(e) => handleChange('incoterm', e.target.value)} />
-              </div>
-              <div>
-                <Label>Piezas</Label>
-                <Input className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" type="number" value={form?.piezas ?? ''} onChange={(e) => handleChange('piezas', e.target.value)} />
-              </div>
-              <div>
-                <Label>Peso (Kg)</Label>
-                <Input className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" type="number" value={form?.pesoKg ?? ''} onChange={(e) => handleChange('pesoKg', e.target.value)} />
-              </div>
-              <div>
-                <Label>Volumen (m3)</Label>
-                <Input className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" type="number" value={form?.m3 ?? ''} onChange={(e) => handleChange('m3', e.target.value)} />
-              </div>
-              <div className="md:col-span-4">
-                <Label>Descripción</Label>
-                <textarea
-                  className="mt-1 w-full min-h-[96px] rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500"
-                  value={form?.descripcion || ''}
-                  onChange={(e) => handleChange('descripcion', e.target.value)}
-                  placeholder="Detalle adicional de la operación (mercancía, consideraciones, etc.)"
-                />
-              </div>
+            <h3 className="text-sm font-semibold mb-2 text-blue-600">Datos específicos</h3>
+            {renderTypeSpecific()}
+            <div className="mt-4">
+              <Label>Descripción</Label>
+              <textarea
+                className="mt-1 w-full min-h-[96px] rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                value={form?.descripcion || ''}
+                onChange={(e) => handleChange('descripcion', e.target.value)}
+                placeholder="Detalle adicional de la operación (mercancía, consideraciones, etc.)"
+              />
             </div>
           </div>
 
