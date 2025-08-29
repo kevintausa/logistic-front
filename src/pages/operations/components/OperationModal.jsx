@@ -288,16 +288,16 @@ const getDefaultsForType = (tipoId) => {
     case 'agenciamiento_aduanero':
       return { partidaArancelaria: '', valorMercancia: '', uso: '', tipoMercancia: 'general', moneda: 'USD' };
     case 'transporte_terrestre':
-      return { valorMercancia: '', moneda: 'USD', detalles: { piezas: '', largo: '', ancho: '', alto: '', peso: '', tipo: 'pallet', unidadMedida: 'cm' }, apilable: false };
+      return { valorMercancia: '', moneda: 'USD', detalles: { piezas: '', largo: '', ancho: '', alto: '', peso: '', pesoUnidad: 'kg', tipo: 'pallet', unidadMedida: 'cm' }, apilable: false };
     case 'importacion_lcl':
     case 'exportacion_lcl':
-      return { valorMercancia: '', moneda: 'USD', detalles: { piezas: '', largo: '', ancho: '', alto: '', peso: '', tipo: 'pallet', unidadMedida: 'cm' }, apilable: false };
+      return { valorMercancia: '', moneda: 'USD', detalles: { piezas: '', largo: '', ancho: '', alto: '', peso: '', pesoUnidad: 'kg', tipo: 'pallet', unidadMedida: 'cm' }, apilable: false };
     case 'importacion_fcl':
     case 'exportacion_fcl':
-      return { valorMercancia: '', moneda: 'USD', numeroContenedores: '', detalles: { tipoContenedor: '20_pies', peso: '', tipo: 'pallet' } };
+      return { valorMercancia: '', moneda: 'USD', numeroContenedores: '', detalles: { tipoContenedor: '20_pies', peso: '', pesoUnidad: 'kg', tipo: 'pallet' } };
     case 'importacion_aerea':
     case 'exportacion_aerea':
-      return { detalles: { piezas: '', largo: '', ancho: '', alto: '', peso: '', unidadMedida: 'cm' }, tipoMercancia: 'general', apilable: false };
+      return { detalles: { piezas: '', largo: '', ancho: '', alto: '', peso: '', pesoUnidad: 'kg', unidadMedida: 'cm' }, tipoMercancia: 'general', apilable: false };
     default:
       return {};
   }
@@ -468,7 +468,21 @@ const getDefaultsForType = (tipoId) => {
             </div>
             <div>
               <Label>Peso</Label>
-              <Input type="number" value={det.peso ?? ''} onChange={(e) => handleChange('especifico.detalles.peso', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+              <div className="flex gap-2 items-center">
+                <Input type="number" value={det.peso ?? ''} onChange={(e) => handleChange('especifico.detalles.peso', e.target.value)} className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+                <div className="min-w-[120px]">
+                  <SelectSimple
+                    value={det.pesoUnidad || 'kg'}
+                    onValueChange={(v) => handleChange('especifico.detalles.pesoUnidad', v)}
+                    options={[
+                      { value: 'kg', label: 'kg' },
+                      { value: 'lb', label: 'lb' },
+                      { value: 'ton', label: 'ton' },
+                    ]}
+                    placeholder="Unidad"
+                  />
+                </div>
+              </div>
             </div>
             <div>
               <Label>Tipo</Label>

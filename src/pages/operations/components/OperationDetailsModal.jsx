@@ -43,6 +43,10 @@ const OperationDetailsModal = ({ isOpen, onClose, item }) => {
     if (!hasAny) return '—';
     return `${l || '—'} x ${a || '—'} x ${h || '—'}${u ? ` ${u}` : ''}`;
   };
+  const weight = (v, u) => {
+    if (v === undefined || v === null || v === '') return '—';
+    return `${v} ${u || 'kg'}`;
+  };
 
   return (
     <motion.div
@@ -77,7 +81,7 @@ const OperationDetailsModal = ({ isOpen, onClose, item }) => {
           <Row label="Puerto Descarga" value={safe(item.puertoDescarga || {}, 'nombre')} />
           <Row label="Incoterm" value={item.incoterm} />
           <Row label="Piezas" value={item.piezas} />
-          <Row label="Peso (Kg)" value={item.pesoKg} />
+          <Row label="Peso" value={weight(item.pesoKg, 'kg')} />
           <Row label="Volumen (m3)" value={item.m3} />
           <Row label="Asesor" value={item.asesorNombre} />
           <Row label="Correo asesor" value={item.asesorCorreo} />
@@ -103,7 +107,7 @@ const OperationDetailsModal = ({ isOpen, onClose, item }) => {
               <Row label="Valor mercancía" value={money(esp.valorMercancia, esp.moneda)} />
               <Row label="Piezas (detalles)" value={det.piezas} />
               <Row label="Dimensiones" value={dim(det.largo, det.ancho, det.alto, det.unidadMedida)} />
-              <Row label="Peso (detalles)" value={det.peso} />
+              <Row label="Peso (detalles)" value={weight(det.peso, det.pesoUnidad)} />
               <Row label="Tipo bulto" value={det.tipo} />
               <Row label="Apilable" value={esp.apilable === true ? 'Sí' : (esp.apilable === false ? 'No' : '—')} />
             </div>
@@ -113,7 +117,7 @@ const OperationDetailsModal = ({ isOpen, onClose, item }) => {
               <Row label="Valor mercancía" value={money(esp.valorMercancia, esp.moneda)} />
               <Row label="Nº contenedores" value={esp.numeroContenedores} />
               <Row label="Tipo contenedor" value={det.tipoContenedor} />
-              <Row label="Peso (detalles)" value={det.peso} />
+              <Row label="Peso (detalles)" value={weight(det.peso, det.pesoUnidad)} />
               <Row label="Tipo bulto" value={det.tipo} />
               <Row label="Incoterm" value={item.incoterm} />
             </div>
@@ -122,7 +126,7 @@ const OperationDetailsModal = ({ isOpen, onClose, item }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Row label="Piezas (detalles)" value={det.piezas} />
               <Row label="Dimensiones" value={dim(det.largo, det.ancho, det.alto, det.unidadMedida)} />
-              <Row label="Peso (detalles)" value={det.peso} />
+              <Row label="Peso (detalles)" value={weight(det.peso, det.pesoUnidad)} />
               <Row label="Tipo mercancía" value={esp.tipoMercancia} />
               <Row label="Apilable" value={esp.apilable === true ? 'Sí' : (esp.apilable === false ? 'No' : '—')} />
               <Row label="Incoterm" value={item.incoterm} />
