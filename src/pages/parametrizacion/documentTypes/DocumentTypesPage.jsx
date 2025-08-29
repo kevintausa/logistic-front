@@ -136,7 +136,7 @@ const DocumentTypesPage = () => {
               filters={filters}
               fields={[
                 { id: 'estado', label: 'Estado', type: 'select', options: [ { value: 'Activo', label: 'Activo' }, { value: 'Inactivo', label: 'Inactivo' } ] },
-                { id: 'aplicaA', label: 'Aplica a', type: 'select', options: [ { value: 'empleado', label: 'Empleado' }, { value: 'centro', label: 'Centro' }, { value: 'ambos', label: 'Ambos' } ] },
+                { id: 'aplicaA', label: 'Aplica a', type: 'select', options: [ { value: 'cliente', label: 'Cliente' }, { value: 'general', label: 'General' }, { value: 'ambos', label: 'Ambos' } ] },
                 { id: 'createdAt', label: 'Rango de fechas', type: 'daterange' },
               ]}
               onRemoveFilter={(key) => { const nf = { ...filters }; delete nf[key]; setFilters(nf); }}
@@ -157,7 +157,7 @@ const DocumentTypesPage = () => {
             onClose={() => setIsDrawerOpen(false)}
             fields={[
               { id: 'estado', label: 'Estado', type: 'select', options: [ { value: 'Activo', label: 'Activo' }, { value: 'Inactivo', label: 'Inactivo' } ] },
-              { id: 'aplicaA', label: 'Aplica a', type: 'select', options: [ { value: 'empleado', label: 'Empleado' }, { value: 'centro', label: 'Centro' }, { value: 'ambos', label: 'Ambos' } ] },
+              { id: 'aplicaA', label: 'Aplica a', type: 'select', options: [ { value: 'cliente', label: 'Cliente' }, { value: 'general', label: 'General' }, { value: 'ambos', label: 'Ambos' } ] },
               { id: 'createdAt', label: 'Rango de fechas', type: 'daterange', defaultToday: true },
             ]}
             initialFilters={filters}

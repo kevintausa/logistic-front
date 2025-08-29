@@ -7,8 +7,8 @@ export const documentTypesColumns = [
     sortable: true,
     required: true,
     options: [
-      { value: 'empleado', label: 'Empleado' },
-      { value: 'centro', label: 'Centro de lavado' },
+      { value: 'cliente', label: 'Cliente' },
+      { value: 'general', label: 'General' },
       { value: 'ambos', label: 'Ambos' },
     ],
   },
