@@ -105,6 +105,12 @@ const Navbar = () => {
           module: MODULES.LOADING_PORTS,
         },
         {
+          name: 'Incoterms',
+          path: '/parametrizacion/incoterms',
+          icon: FileText,
+          module: MODULES.INCOTERMS,
+        },
+        {
           name: 'Aeropuertos',
           path: '/parametrizacion/aeropuertos',
           icon: Plane,

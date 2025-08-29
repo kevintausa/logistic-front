@@ -8,6 +8,7 @@ import OperatorsPage from '@/pages/parametrizacion/operators/OperatorsPage';
 import OperationTypesPage from '@/pages/parametrizacion/operation-types/OperationTypesPage';
 import ViasPage from '@/pages/parametrizacion/vias/ViasPage';
 import LoadingPortsPage from '@/pages/parametrizacion/loading-ports/LoadingPortsPage';
+import IncotermsPage from '@/pages/parametrizacion/incoterms/IncotermsPage';
 import AirportsPage from '@/pages/parametrizacion/airports/AirportsPage';
 import OperationsPage from '@/pages/operations/OperationsPage';
 import LoginPage from '@/pages/LoginPage';
@@ -123,6 +124,11 @@ function AppContent() {
         <Route path="/parametrizacion/puertos-carga" element={
           <ProtectedRoute requiredModule={MODULES.LOADING_PORTS}>
             <LoadingPortsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/parametrizacion/incoterms" element={
+          <ProtectedRoute requiredModule={MODULES.INCOTERMS}>
+            <IncotermsPage />
           </ProtectedRoute>
         } />
         <Route path="/parametrizacion/aeropuertos" element={
