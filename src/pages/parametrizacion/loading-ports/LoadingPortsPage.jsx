@@ -40,7 +40,7 @@ const LoadingPortsPage = () => {
     return () => clearTimeout(id);
   }, [searchTerm]);
 
-  // Build query with $or for quick search
+  // Build query with $or for quick search (new fields)
   useEffect(() => {
     const base = { ...filters };
     // Remove previous $or before applying a new one
@@ -49,14 +49,11 @@ const LoadingPortsPage = () => {
       base.$or = [
         { nombre: { $regex: debouncedTerm, $options: 'i' } },
         { ciudad: { $regex: debouncedTerm, $options: 'i' } },
-        { codigo: { $regex: debouncedTerm, $options: 'i' } },
-        { locode: { $regex: debouncedTerm, $options: 'i' } },
         { pais: { $regex: debouncedTerm, $options: 'i' } },
-        { subdivision: { $regex: debouncedTerm, $options: 'i' } },
         { tipo: { $regex: debouncedTerm, $options: 'i' } },
-        { status: { $regex: debouncedTerm, $options: 'i' } },
         { iata: { $regex: debouncedTerm, $options: 'i' } },
-        { funciones: { $regex: debouncedTerm, $options: 'i' } },
+        { icao: { $regex: debouncedTerm, $options: 'i' } },
+        { unlocode: { $regex: debouncedTerm, $options: 'i' } },
       ];
     }
     setFilters(base);
@@ -87,11 +84,25 @@ const LoadingPortsPage = () => {
 
   const handleSaveItem = async (itemData) => {
     try {
+      // Normalizar/generar ID si no viene
+      let payload = { ...itemData };
+      const tipo = (payload.tipo || '').toString().trim().toLowerCase();
+      const iata = (payload.iata || '').toString().trim().toUpperCase() || null;
+      const icao = (payload.icao || '').toString().trim().toUpperCase() || null;
+      const unlocode = (payload.unlocode || '').toString().trim().toUpperCase() || null;
+      const code = iata || icao || unlocode || null;
+      if (!payload.id && tipo && code) {
+        payload.id = `${tipo}:${code}`;
+      }
+      // Asegurar tipos numéricos para lat/lng
+      if (payload.lat !== undefined && payload.lat !== null) payload.lat = Number(payload.lat);
+      if (payload.lng !== undefined && payload.lng !== null) payload.lng = Number(payload.lng);
+
       if (modalMode === 'create') {
-        const response = await createLoadingPort(itemData);
+        const response = await createLoadingPort(payload);
         if (response.code === 201) toast({ title: 'Creado', description: 'Puerto de carga creado.' }); else throw new Error(response.message);
       } else {
-        const response = await updateLoadingPort(currentItem._id, itemData);
+        const response = await updateLoadingPort(currentItem._id, payload);
         if (response.code === 200) toast({ title: 'Actualizado', description: 'Puerto de carga actualizado.' }); else throw new Error(response.message);
       }
     } catch (error) {
@@ -145,7 +156,7 @@ const LoadingPortsPage = () => {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por nombre, ciudad, código, locode, país..."
+              placeholder="Buscar por nombre, ciudad, país, tipo, IATA, ICAO, UN/LOCODE..."
               className="w-full md:w-1/2 border rounded px-3 py-2"
             />
           </div>

@@ -452,7 +452,7 @@ const OperationsPage = () => {
             onClose={handleCloseModal}
             onSave={handleSaveItem}
             item={currentItem}
-            title={currentItem ? 'Editar Operación' : 'Crear Operación'}
+            title={currentItem ? 'Editar Solicitud' : 'Crear Solicitud'}
           />
         )}
         {isDetailsOpen && (
