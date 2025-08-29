@@ -3,16 +3,46 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 
-const Row = ({ label, value }) => (
-  <div className="flex flex-col">
-    <span className="text-xs text-muted-foreground">{label}</span>
-    <span className="text-sm font-medium">{value ?? '—'}</span>
-  </div>
-);
+const Row = ({ label, value }) => {
+  const isEmpty = value === undefined || value === null || value === '' || value === '—';
+  if (isEmpty) return null;
+  return (
+    <div className="flex flex-col">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium">{value}</span>
+    </div>
+  );
+};
 
 const OperationDetailsModal = ({ isOpen, onClose, item }) => {
   if (!isOpen || !item) return null;
   const safe = (obj, key, fallback = '—') => (obj && obj[key]) ? obj[key] : fallback;
+  const esp = item.especifico || {};
+  const det = esp.detalles || {};
+  const tipoId = ((item?.tipoOperacion?.id) || '').toLowerCase();
+  const isTerrestreOrLCL = tipoId === 'transporte_terrestre' || tipoId === 'importacion_lcl' || tipoId === 'exportacion_lcl';
+  const isFCL = tipoId === 'importacion_fcl' || tipoId === 'exportacion_fcl';
+  const isAerea = tipoId === 'importacion_aerea' || tipoId === 'exportacion_aerea';
+  const isAgenciamiento = tipoId === 'agenciamiento_aduanero';
+
+  const formatNumberWithCommas = (val) => {
+    if (val === undefined || val === null || val === '') return '—';
+    const str = String(val);
+    const cleaned = str.replace(/[^0-9.]/g, '');
+    if (!cleaned) return '—';
+    const [intPart, decPart] = cleaned.split('.');
+    const withCommas = intPart ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+    return decPart !== undefined ? `${withCommas}.${decPart}` : withCommas;
+  };
+  const money = (v, cur) => {
+    const n = formatNumberWithCommas(v);
+    return n === '—' ? '—' : `${n}${cur ? ` ${cur}` : ''}`;
+  };
+  const dim = (l, a, h, u) => {
+    const hasAny = l || a || h;
+    if (!hasAny) return '—';
+    return `${l || '—'} x ${a || '—'} x ${h || '—'}${u ? ` ${u}` : ''}`;
+  };
 
   return (
     <motion.div
@@ -55,6 +85,49 @@ const OperationDetailsModal = ({ isOpen, onClose, item }) => {
             <span className="text-xs text-muted-foreground">Descripción</span>
             <div className="mt-1 text-sm whitespace-pre-wrap bg-muted/30 border border-border rounded p-3 min-h-[72px]">{item.descripcion || '—'}</div>
           </div>
+        </div>
+
+        {/* Específico por tipo */}
+        <div className="mt-6">
+          <h4 className="text-sm font-semibold text-blue-700 mb-2">Específico</h4>
+          {isAgenciamiento && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Row label="Partida arancelaria" value={esp.partidaArancelaria} />
+              <Row label="Valor mercancía" value={money(esp.valorMercancia, esp.moneda)} />
+              <Row label="Uso" value={esp.uso} />
+              <Row label="Tipo mercancía" value={esp.tipoMercancia} />
+            </div>
+          )}
+          {isTerrestreOrLCL && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Row label="Valor mercancía" value={money(esp.valorMercancia, esp.moneda)} />
+              <Row label="Piezas (detalles)" value={det.piezas} />
+              <Row label="Dimensiones" value={dim(det.largo, det.ancho, det.alto, det.unidadMedida)} />
+              <Row label="Peso (detalles)" value={det.peso} />
+              <Row label="Tipo bulto" value={det.tipo} />
+              <Row label="Apilable" value={esp.apilable === true ? 'Sí' : (esp.apilable === false ? 'No' : '—')} />
+            </div>
+          )}
+          {isFCL && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Row label="Valor mercancía" value={money(esp.valorMercancia, esp.moneda)} />
+              <Row label="Nº contenedores" value={esp.numeroContenedores} />
+              <Row label="Tipo contenedor" value={det.tipoContenedor} />
+              <Row label="Peso (detalles)" value={det.peso} />
+              <Row label="Tipo bulto" value={det.tipo} />
+              <Row label="Incoterm" value={item.incoterm} />
+            </div>
+          )}
+          {isAerea && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Row label="Piezas (detalles)" value={det.piezas} />
+              <Row label="Dimensiones" value={dim(det.largo, det.ancho, det.alto, det.unidadMedida)} />
+              <Row label="Peso (detalles)" value={det.peso} />
+              <Row label="Tipo mercancía" value={esp.tipoMercancia} />
+              <Row label="Apilable" value={esp.apilable === true ? 'Sí' : (esp.apilable === false ? 'No' : '—')} />
+              <Row label="Incoterm" value={item.incoterm} />
+            </div>
+          )}
         </div>
 
         <div className="mt-6 flex justify-end">
