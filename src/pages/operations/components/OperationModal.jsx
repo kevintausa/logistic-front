@@ -11,6 +11,7 @@ import { fetchOperationTypes } from '@/pages/parametrizacion/operation-types/Ser
 import { fetchUsers } from '@/pages/parametrizacion/usuarios/Services/users.services';
 import { fetchClients } from '@/pages/parametrizacion/clients/Services/clients.services';
 import { fetchLoadingPorts } from '@/pages/parametrizacion/loading-ports/Services/loading-ports.services';
+import { countries, countriesMap } from '@/data/countries';
 
 // Modal especializado para crear/editar Operaciones
 // Props:
@@ -25,7 +26,7 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
   const [catalogs, setCatalogs] = useState({ vias: [], tipos: [], asesores: [] });
   const [loadingCatalogs, setLoadingCatalogs] = useState(false);
   const [suggestions, setSuggestions] = useState({ puertosCarga: [], puertosDescarga: [] });
-  const [loadingSuggest, setLoadingSuggest] = useState({ cliente: false, puertoCarga: false, puertoDescarga: false });
+  const [loadingSuggest, setLoadingSuggest] = useState({ cliente: false, puertoCarga: false, puertoDescarga: false, paisOrigen: false, ciudadOrigen: false, paisDestino: false, ciudadDestino: false });
 
   const debounceRef = useRef({});
 
@@ -116,6 +117,28 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
     debounceRef.current[key] = setTimeout(fn, delay);
   };
 
+  // Prefetch puertos for a given scope ('origen' | 'destino') using selected país and vía
+  // viaOverride: 'aerea' | 'maritima' (optional)
+  const fetchPortsForScope = async (scope, viaOverride) => {
+    try {
+      const viaNombre = viaOverride
+        ? (viaOverride === 'aerea' ? 'aérea' : 'marítima')
+        : (form?.via?.nombre || '').toLowerCase();
+      let tipoFiltro = undefined;
+      if (viaNombre.includes('érea') || viaNombre.includes('aerea')) tipoFiltro = 'aeropuerto';
+      else if (viaNombre.includes('marít') || viaNombre.includes('marit')) tipoFiltro = 'puerto';
+      const paisSel = form?.[scope]?.pais || '';
+      if (!paisSel && !tipoFiltro) return;
+      const base = { ...(tipoFiltro ? { tipo: tipoFiltro } : {}) };
+      if (paisSel) base.pais = { $regex: `^${paisSel}$`, $options: 'i' };
+      const res = await fetchLoadingPorts({ limit: 20, offset: 1, query: base });
+      const items = res?.data?.items || res?.items || res?.data || [];
+      setSuggestions(prev => ({ ...prev, [scope === 'origen' ? 'puertosCarga' : 'puertosDescarga']: items }));
+    } catch (e) {
+      console.error('Error pre-cargando puertos por país', e);
+    }
+  };
+
   // Buscar cliente por NIT y autocompletar
   const onClienteNitChange = (value) => {
     handleChange('cliente.nit', value);
@@ -149,6 +172,12 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
     handleChange(`${fieldBase}.nombre`, value);
     // limpiar id cuando cambia el nombre manualmente
     handleChange(`${fieldBase}.id`, '');
+    // limpiar ciudad mostrada si el usuario vuelve a tipear
+    handleChange(`${fieldBase}.ciudad`, '');
+    // limpiar códigos y país
+    handleChange(`${fieldBase}.iata`, '');
+    handleChange(`${fieldBase}.unlocode`, '');
+    // Nota: no limpiamos el país seleccionado; país se elige de forma independiente
     if (!value || value.length < 2) { // mínimo 2 chars
       setSuggestions(prev => ({ ...prev, [fieldBase === 'puertoCarga' ? 'puertosCarga' : 'puertosDescarga']: [] }));
       return;
@@ -158,7 +187,25 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
     setLoadingSuggest(prev => ({ ...prev, [suggestKey]: true }));
     debounce(`port-${key}`, async () => {
       try {
-        const res = await fetchLoadingPorts({ limit: 10, offset: 1, query: { nombre: value } });
+        // Determinar tipo según vía
+        const viaNombre = (form?.via?.nombre || '').toLowerCase();
+        let tipoFiltro = undefined;
+        if (viaNombre.includes('érea') || viaNombre.includes('aerea')) tipoFiltro = 'aeropuerto';
+        else if (viaNombre.includes('marít') || viaNombre.includes('marit')) tipoFiltro = 'puerto';
+        // Filtros por país según si es carga o descarga (ciudad es opcional y NO filtra puertos)
+        const scope = fieldBase === 'puertoCarga' ? 'origen' : 'destino';
+        const paisSel = form?.[scope]?.pais || '';
+        const term = value.trim();
+        const or = [
+          { nombre: { $regex: term, $options: 'i' } },
+          { ciudad: { $regex: term, $options: 'i' } },
+          { iata: { $regex: term, $options: 'i' } },
+          { unlocode: { $regex: term, $options: 'i' } },
+        ];
+        const base = tipoFiltro ? { tipo: tipoFiltro } : {};
+        if (paisSel) base.pais = { $regex: `^${paisSel}$`, $options: 'i' };
+        const query = { ...base, $or: or };
+        const res = await fetchLoadingPorts({ limit: 10, offset: 1, query });
         const items = res?.data?.items || res?.items || res?.data || [];
         setSuggestions(prev => ({
           ...prev,
@@ -175,9 +222,77 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
   const onSelectPuerto = (fieldBase, port) => {
     setForm(prev => ({
       ...prev,
-      [fieldBase]: { id: port._id || port.id, nombre: port.nombre || port.name || '' }
+      [fieldBase]: {
+        id: port._id || port.id,
+        nombre: port.nombre || port.name || '',
+        ciudad: port.ciudad || '',
+        iata: port.iata || '',
+        unlocode: port.unlocode || '',
+        pais: port.pais || '',
+      }
     }));
+    // Si faltan país/ciudad en origen/destino, complétalos con el puerto seleccionado
+    const scope = fieldBase === 'puertoCarga' ? 'origen' : 'destino';
+    if (!form?.[scope]?.pais || !form?.[scope]?.ciudad) {
+      setForm(prev => ({
+        ...prev,
+        [scope]: {
+          ...(prev?.[scope] || {}),
+          pais: port.pais || (prev?.[scope]?.pais || ''),
+          ciudad: port.ciudad || (prev?.[scope]?.ciudad || ''),
+        }
+      }));
+    }
     setSuggestions(prev => ({ ...prev, [fieldBase === 'puertoCarga' ? 'puertosCarga' : 'puertosDescarga']: [] }));
+  };
+
+  // Helpers
+  const unique = (arr) => Array.from(new Set(arr.filter(Boolean)));
+
+  // País (origen/destino) con sugerencias locales
+  const onPaisChange = (scope, value) => {
+    // scope: 'origen' | 'destino'
+    // Edita solo el display; el código se fija al seleccionar una opción
+    handleChange(`${scope}.paisDisplay`, value);
+    // al cambiar país, limpiar ciudad y puerto
+    handleChange(`${scope}.ciudad`, '');
+    const portKey = scope === 'origen' ? 'puertoCarga' : 'puertoDescarga';
+    handleChange(`${portKey}.nombre`, '');
+    setSuggestions(prev => ({
+      ...prev,
+      [scope === 'origen' ? 'puertosCarga' : 'puertosDescarga']: [],
+    }));
+    if (!value || value.length < 1) {
+      // si el usuario borra, también limpiamos el código almacenado
+      handleChange(`${scope}.pais`, '');
+      setSuggestions(prev => ({ ...prev, [`paises${scope === 'origen' ? 'Origen' : 'Destino'}`]: [] }));
+      return;
+    }
+    // filtrar localmente por código o nombre
+    const term = value.trim().toLowerCase();
+    const matches = countries.filter(c => c.code.toLowerCase().includes(term) || c.name.toLowerCase().includes(term)).slice(0, 20);
+    setSuggestions(prev => ({ ...prev, [`paises${scope === 'origen' ? 'Origen' : 'Destino'}`]: matches }));
+  };
+
+  // Selección de país desde sugerencias: fija el CÓDIGO (ISO2) y el display "Nombre (CODE)", luego pre-carga puertos
+  const onSelectPais = async (scope, countryObj) => {
+    handleChange(`${scope}.pais`, countryObj.code);
+    handleChange(`${scope}.paisDisplay`, `${countryObj.name} (${countryObj.code})`);
+    handleChange(`${scope}.ciudad`, '');
+    const portKey = scope === 'origen' ? 'puertoCarga' : 'puertoDescarga';
+    handleChange(`${portKey}.nombre`, '');
+    setSuggestions(prev => ({
+      ...prev,
+      [`paises${scope === 'origen' ? 'Origen' : 'Destino'}`]: [],
+    }));
+    await fetchPortsForScope(scope);
+  };
+
+  // Ciudad (origen/destino) local: no realiza consultas ni sugiere
+  const onCiudadChange = (scope, value) => {
+    handleChange(`${scope}.ciudad`, value);
+    // limpiar cualquier sugerencia previa de ciudades
+    setSuggestions(prev => ({ ...prev, [`ciudades${scope === 'origen' ? 'Origen' : 'Destino'}`]: [] }));
   };
 
   if (!isOpen) return null;
@@ -252,17 +367,29 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
                 <Select
                   value={form?.via?.id || ''}
                   onValueChange={(val) => {
-                    const selected = catalogs.vias.find(v => (v._id || v.id) === val);
-                    setForm(prev => ({ ...prev, via: { id: val, nombre: selected?.nombre || selected?.name || '' } }));
+                    const nombre = val === 'aerea' ? 'Aérea' : 'Marítima';
+                    const hasPaisOrigen = !!(form?.origen?.pais);
+                    const hasPaisDestino = !!(form?.destino?.pais);
+                    // Actualiza vía y limpia selección de puertos
+                    setForm(prev => ({
+                      ...prev,
+                      via: { id: val, nombre },
+                      puertoCarga: { id: '', nombre: '' },
+                      puertoDescarga: { id: '', nombre: '' },
+                    }));
+                    // limpiar sugerencias de puertos al cambiar vía
+                    setSuggestions(prev => ({ ...prev, puertosCarga: [], puertosDescarga: [] }));
+                    // Prefetch según el país y la nueva vía
+                    if (hasPaisOrigen) fetchPortsForScope('origen', val);
+                    if (hasPaisDestino) fetchPortsForScope('destino', val);
                   }}
                 >
                   <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
                     <SelectValue placeholder={loadingCatalogs ? 'Cargando...' : 'Seleccionar vía'} />
                   </SelectTrigger>
                   <SelectContent>
-                    {catalogs.vias.map(v => (
-                      <SelectItem key={v._id || v.id} value={(v._id || v.id)}>{v.nombre || v.name}</SelectItem>
-                    ))}
+                    <SelectItem value="aerea">Aérea</SelectItem>
+                    <SelectItem value="maritima">Marítima</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors['via.nombre'] && <p className="text-sm text-destructive">{errors['via.nombre']}</p>}
@@ -270,33 +397,142 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
             </div>
           </div>
 
-          {/* Puertos */}
+          {/* Origen */}
           <div className="md:col-span-2">
-            <h3 className="text-sm font-semibold mb-2 text-blue-600">Puertos</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <h3 className="text-sm font-semibold mb-2 text-blue-600">Origen</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* País Origen */}
               <div className="relative">
-                <Label>Puerto Carga</Label>
-                <Input className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" value={form?.puertoCarga?.nombre || ''} onChange={(e) => onPuertoNombreChange('puertoCarga', e.target.value)} />
-                {loadingSuggest.puertoCarga && <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-8 text-muted-foreground" />}
-                {suggestions.puertosCarga?.length > 0 && (
+                <Label>País Origen</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={
+                      form?.origen?.paisDisplay
+                        || (form?.origen?.pais && countriesMap[form.origen.pais] ? `${countriesMap[form.origen.pais]} (${form.origen.pais})` : (form?.origen?.pais || ''))
+                    }
+                    onChange={(e) => onPaisChange('origen', e.target.value)}
+                    className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                  />
+                </div>
+                {loadingSuggest.paisOrigen && <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-8 text-muted-foreground" />}
+                {Array.isArray(suggestions.paisesOrigen) && suggestions.paisesOrigen.length > 0 && (
                   <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-sm max-h-52 overflow-auto">
-                    {suggestions.puertosCarga.map(p => (
-                      <button type="button" key={p._id || p.id} className="w-full text-left px-3 py-2 hover:bg-accent" onClick={() => onSelectPuerto('puertoCarga', p)}>
-                        {p.nombre}
+                    {suggestions.paisesOrigen.map(c => (
+                      <button type="button" key={c.code} className="w-full text-left px-3 py-2 hover:bg-accent" onClick={() => onSelectPais('origen', c)}>
+                        {c.name} ({c.code})
                       </button>
                     ))}
                   </div>
                 )}
               </div>
+              {/* Ciudad Origen */}
               <div className="relative">
-                <Label>Puerto Descarga</Label>
-                <Input className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" value={form?.puertoDescarga?.nombre || ''} onChange={(e) => onPuertoNombreChange('puertoDescarga', e.target.value)} />
+                <Label>Ciudad Origen</Label>
+                <Input value={form?.origen?.ciudad || ''} onChange={(e) => onCiudadChange('origen', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+                {loadingSuggest.ciudadOrigen && <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-8 text-muted-foreground" />}
+                {Array.isArray(suggestions.ciudadesOrigen) && suggestions.ciudadesOrigen.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-sm max-h-52 overflow-auto">
+                    {suggestions.ciudadesOrigen.map(c => (
+                      <button type="button" key={c} className="w-full text-left px-3 py-2 hover:bg-accent" onClick={() => handleChange('origen.ciudad', c)}>
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Puerto Carga */}
+              <div className="relative">
+                <Label>Puerto Carga</Label>
+                <div className="flex items-center gap-2">
+                  <Input className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" value={form?.puertoCarga?.nombre || ''} onChange={(e) => onPuertoNombreChange('puertoCarga', e.target.value)} />
+                  {(form?.puertoCarga?.ciudad || form?.puertoCarga?.iata || form?.puertoCarga?.unlocode) && (
+                    <div className="text-xs text-muted-foreground whitespace-nowrap">
+                      {form?.puertoCarga?.ciudad || ''}
+                      {(form?.puertoCarga?.iata || form?.puertoCarga?.unlocode) && (
+                        <span> ({[form?.puertoCarga?.iata, form?.puertoCarga?.unlocode].filter(Boolean).join(' / ')})</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {loadingSuggest.puertoCarga && <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-8 text-muted-foreground" />}
+                {suggestions.puertosCarga?.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-sm max-h-52 overflow-auto">
+                    {suggestions.puertosCarga.map(p => (
+                      <button type="button" key={p._id || p.id} className="w-full text-left px-3 py-2 hover:bg-accent" onClick={() => onSelectPuerto('puertoCarga', p)}>
+                        <span className="font-medium">{p.nombre}</span>
+                        {p.ciudad ? <span className="text-muted-foreground"> — {p.ciudad}</span> : null}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Destino */}
+          <div className="md:col-span-2">
+            <h3 className="text-sm font-semibold mb-2 text-blue-600">Destino</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* País Destino */}
+              <div className="relative">
+                <Label>País Destino</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={
+                      form?.destino?.paisDisplay
+                        || (form?.destino?.pais && countriesMap[form.destino.pais] ? `${countriesMap[form.destino.pais]} (${form.destino.pais})` : (form?.destino?.pais || ''))
+                    }
+                    onChange={(e) => onPaisChange('destino', e.target.value)}
+                    className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                  />
+                </div>
+                {loadingSuggest.paisDestino && <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-8 text-muted-foreground" />}
+                {Array.isArray(suggestions.paisesDestino) && suggestions.paisesDestino.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-sm max-h-52 overflow-auto">
+                    {suggestions.paisesDestino.map(c => (
+                      <button type="button" key={c.code} className="w-full text-left px-3 py-2 hover:bg-accent" onClick={() => onSelectPais('destino', c)}>
+                        {c.name} ({c.code})
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Ciudad Destino */}
+              <div className="relative">
+                <Label>Ciudad Destino</Label>
+                <Input value={form?.destino?.ciudad || ''} onChange={(e) => onCiudadChange('destino', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+                {loadingSuggest.ciudadDestino && <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-8 text-muted-foreground" />}
+                {Array.isArray(suggestions.ciudadesDestino) && suggestions.ciudadesDestino.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-sm max-h-52 overflow-auto">
+                    {suggestions.ciudadesDestino.map(c => (
+                      <button type="button" key={c} className="w-full text-left px-3 py-2 hover:bg-accent" onClick={() => handleChange('destino.ciudad', c)}>
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Puerto Destino */}
+              <div className="relative">
+                <Label>Puerto Destino</Label>
+                <div className="flex items-center gap-2">
+                  <Input className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" value={form?.puertoDescarga?.nombre || ''} onChange={(e) => onPuertoNombreChange('puertoDescarga', e.target.value)} />
+                  {(form?.puertoDescarga?.ciudad || form?.puertoDescarga?.iata || form?.puertoDescarga?.unlocode) && (
+                    <div className="text-xs text-muted-foreground whitespace-nowrap">
+                      {form?.puertoDescarga?.ciudad || ''}
+                      {(form?.puertoDescarga?.iata || form?.puertoDescarga?.unlocode) && (
+                        <span> ({[form?.puertoDescarga?.iata, form?.puertoDescarga?.unlocode].filter(Boolean).join(' / ')})</span>
+                      )}
+                    </div>
+                  )}
+                </div>
                 {loadingSuggest.puertoDescarga && <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-8 text-muted-foreground" />}
                 {suggestions.puertosDescarga?.length > 0 && (
                   <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-sm max-h-52 overflow-auto">
                     {suggestions.puertosDescarga.map(p => (
                       <button type="button" key={p._id || p.id} className="w-full text-left px-3 py-2 hover:bg-accent" onClick={() => onSelectPuerto('puertoDescarga', p)}>
-                        {p.nombre}
+                        <span className="font-medium">{p.nombre}</span>
+                        {p.ciudad ? <span className="text-muted-foreground"> — {p.ciudad}</span> : null}
                       </button>
                     ))}
                   </div>
