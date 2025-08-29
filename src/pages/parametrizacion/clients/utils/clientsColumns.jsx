@@ -5,8 +5,10 @@ export const clientsColumns = [
   ] },
   { id: 'nombre', label: 'Nombre', type: 'text', sortable: true, required: true },
   { id: 'nit', label: 'NIT', type: 'text', sortable: true, required: true },
+  { id: 'contacto', label: 'Nombre Contacto', type: 'text', sortable: true, required: false },
   { id: 'direccion', label: 'Dirección', type: 'text', sortable: true, required: true },
   { id: 'telefono', label: 'Teléfono', type: 'text', sortable: true, required: true },
+  {id: 'email', label: 'Correo', type: 'email', sortable: true, required: true },
   {
     id: 'operador',
     label: 'Operador logístico',
@@ -30,9 +32,9 @@ export const clientsColumns = [
       }
     }
   },
-  {id: 'email', label: 'Correo', type: 'email', sortable: true, required: true },
+  
   { id: 'asesor', label: 'Asesor', type: 'text', sortable: true, required: false },
-  { id: 'contacto', label: 'Nombre Contacto', type: 'text', sortable: true, required: false },
+ 
 ];
 
 export const columnsExcel = clientsColumns.map(col => {
