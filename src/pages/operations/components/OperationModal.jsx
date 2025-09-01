@@ -11,6 +11,7 @@ import { fetchUsers } from '@/pages/parametrizacion/usuarios/Services/users.serv
 import { fetchClients } from '@/pages/parametrizacion/clients/Services/clients.services';
 import { fetchLoadingPorts } from '@/pages/parametrizacion/loading-ports/Services/loading-ports.services';
 import { countries, countriesMap } from '@/data/countries';
+import { colombiaGeo } from '@/data/colombiaGeo';
 
 // Modal especializado para crear/editar Operaciones
 // Props:
@@ -82,6 +83,13 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
     if (!form?.cliente?.nombre) e['cliente.nombre'] = 'Cliente Nombre es requerido';
     if (!form?.tipoOperacion?.id) e['tipoOperacion.id'] = 'Tipo Operación ID es requerido';
     if (!form?.tipoOperacion?.nombre) e['tipoOperacion.nombre'] = 'Tipo Operación es requerido';
+    const tipoId = (form?.tipoOperacion?.id || '').toLowerCase();
+    if (tipoId === 'transporte_terrestre') {
+      if (!form?.departamentoRecogida) e['departamentoRecogida'] = 'Departamento de recogida es requerido';
+      if (!form?.ciudadRecogida) e['ciudadRecogida'] = 'Ciudad de recogida es requerida';
+      if (!form?.departamentoEntrega) e['departamentoEntrega'] = 'Departamento de entrega es requerido';
+      if (!form?.ciudadEntrega) e['ciudadEntrega'] = 'Ciudad de entrega es requerida';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -136,9 +144,20 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear Operaci�
         },
       },
     };
-    // Si es agenciamiento aduanero, no enviar origen/destino ni puertos
+    // Normalizar por tipo de operación
     const tipoId = (form?.tipoOperacion?.id || '').toLowerCase();
     if (tipoId === 'agenciamiento_aduanero') {
+      payload.origen = undefined;
+      payload.destino = undefined;
+      payload.puertoCarga = undefined;
+      payload.puertoDescarga = undefined;
+      payload.incoterm = undefined;
+    } else if (tipoId === 'transporte_terrestre') {
+      // Mantener campos terrestres y limpiar marítimo/aéreo
+      payload.ciudadRecogida = form.ciudadRecogida || '';
+      payload.ciudadEntrega = form.ciudadEntrega || '';
+      payload.departamentoRecogida = form.departamentoRecogida || '';
+      payload.departamentoEntrega = form.departamentoEntrega || '';
       payload.origen = undefined;
       payload.destino = undefined;
       payload.puertoCarga = undefined;
@@ -551,7 +570,21 @@ const getDefaultsForType = (tipoId) => {
             </div>
             <div>
               <Label>Peso</Label>
-              <Input type="number" value={det.peso ?? ''} onChange={(e) => handleChange('especifico.detalles.peso', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+              <div className="flex gap-2 items-center">
+                <Input type="number" value={det.peso ?? ''} onChange={(e) => handleChange('especifico.detalles.peso', e.target.value)} className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+                <div className="min-w-[120px]">
+                  <SelectSimple
+                    value={det.pesoUnidad || 'kg'}
+                    onValueChange={(v) => handleChange('especifico.detalles.pesoUnidad', v)}
+                    options={[
+                      { value: 'kg', label: 'kg' },
+                      { value: 'lb', label: 'lb' },
+                      { value: 'ton', label: 'ton' },
+                    ]}
+                    placeholder="Unidad"
+                  />
+                </div>
+              </div>
             </div>
             <div>
               <Label>Tipo</Label>
@@ -590,7 +623,21 @@ const getDefaultsForType = (tipoId) => {
             </div>
             <div>
               <Label>Peso</Label>
-              <Input type="number" value={det.peso ?? ''} onChange={(e) => handleChange('especifico.detalles.peso', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+              <div className="flex gap-2 items-center">
+                <Input type="number" value={det.peso ?? ''} onChange={(e) => handleChange('especifico.detalles.peso', e.target.value)} className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+                <div className="min-w-[120px]">
+                  <SelectSimple
+                    value={det.pesoUnidad || 'kg'}
+                    onValueChange={(v) => handleChange('especifico.detalles.pesoUnidad', v)}
+                    options={[
+                      { value: 'kg', label: 'kg' },
+                      { value: 'lb', label: 'lb' },
+                      { value: 'ton', label: 'ton' },
+                    ]}
+                    placeholder="Unidad"
+                  />
+                </div>
+              </div>
             </div>
             <div>
               <Label>Tipo de mercancía</Label>
@@ -716,6 +763,7 @@ const getDefaultsForType = (tipoId) => {
                       ...prev,
                       tipoOperacion: { id: val, nombre: selected?.nombre || selected?.name || '' },
                       especifico: getDefaultsForType(val),
+                      ...(val !== 'transporte_terrestre' ? { ciudadRecogida: undefined, ciudadEntrega: undefined, departamentoRecogida: undefined, departamentoEntrega: undefined } : {}),
                       ...(val === 'agenciamiento_aduanero'
                         ? { origen: undefined, destino: undefined, puertoCarga: undefined, puertoDescarga: undefined, incoterm: undefined }
                         : {}),
@@ -739,7 +787,7 @@ const getDefaultsForType = (tipoId) => {
           </div>
 
           {/* Origen */}
-          {form?.tipoOperacion?.id !== 'agenciamiento_aduanero' && (
+          {form?.tipoOperacion?.id !== 'agenciamiento_aduanero' && form?.tipoOperacion?.id !== 'transporte_terrestre' && (
           <div className="md:col-span-2">
             <h3 className="text-sm font-semibold mb-2 text-blue-600">Origen</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -782,38 +830,40 @@ const getDefaultsForType = (tipoId) => {
                   </div>
                 )}
               </div>
-              {/* Puerto Carga */}
-              <div className="relative">
-                <Label>Puerto Carga</Label>
-                <div className="flex items-center gap-2">
-                  <Input className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" value={form?.puertoCarga?.nombre || ''} onChange={(e) => onPuertoNombreChange('puertoCarga', e.target.value)} />
-                  {(form?.puertoCarga?.ciudad || form?.puertoCarga?.iata || form?.puertoCarga?.unlocode) && (
-                    <div className="text-xs text-muted-foreground whitespace-nowrap">
-                      {form?.puertoCarga?.ciudad || ''}
-                      {(form?.puertoCarga?.iata || form?.puertoCarga?.unlocode) && (
-                        <span> ({[form?.puertoCarga?.iata, form?.puertoCarga?.unlocode].filter(Boolean).join(' / ')})</span>
-                      )}
+              {/* Puerto Carga (no aplica para transporte terrestre) */}
+              {form?.tipoOperacion?.id !== 'transporte_terrestre' && (
+                <div className="relative">
+                  <Label>Puerto Carga</Label>
+                  <div className="flex items-center gap-2">
+                    <Input className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" value={form?.puertoCarga?.nombre || ''} onChange={(e) => onPuertoNombreChange('puertoCarga', e.target.value)} />
+                    {(form?.puertoCarga?.ciudad || form?.puertoCarga?.iata || form?.puertoCarga?.unlocode) && (
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">
+                        {form?.puertoCarga?.ciudad || ''}
+                        {(form?.puertoCarga?.iata || form?.puertoCarga?.unlocode) && (
+                          <span> ({[form?.puertoCarga?.iata, form?.puertoCarga?.unlocode].filter(Boolean).join(' / ')})</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {loadingSuggest.puertoCarga && <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-8 text-muted-foreground" />}
+                  {suggestions.puertosCarga?.length > 0 && (
+                    <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-sm max-h-52 overflow-auto">
+                      {suggestions.puertosCarga.map(p => (
+                        <button type="button" key={p._id || p.id} className="w-full text-left px-3 py-2 hover:bg-accent" onClick={() => onSelectPuerto('puertoCarga', p)}>
+                          <span className="font-medium">{p.nombre}</span>
+                          {p.ciudad ? <span className="text-muted-foreground"> — {p.ciudad}</span> : null}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
-                {loadingSuggest.puertoCarga && <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-8 text-muted-foreground" />}
-                {suggestions.puertosCarga?.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-sm max-h-52 overflow-auto">
-                    {suggestions.puertosCarga.map(p => (
-                      <button type="button" key={p._id || p.id} className="w-full text-left px-3 py-2 hover:bg-accent" onClick={() => onSelectPuerto('puertoCarga', p)}>
-                        <span className="font-medium">{p.nombre}</span>
-                        {p.ciudad ? <span className="text-muted-foreground"> — {p.ciudad}</span> : null}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
           )}
 
           {/* Destino */}
-          {form?.tipoOperacion?.id !== 'agenciamiento_aduanero' && (
+          {form?.tipoOperacion?.id !== 'agenciamiento_aduanero' && form?.tipoOperacion?.id !== 'transporte_terrestre' && (
           <div className="md:col-span-2">
             <h3 className="text-sm font-semibold mb-2 text-blue-600">Destino</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -856,34 +906,123 @@ const getDefaultsForType = (tipoId) => {
                   </div>
                 )}
               </div>
-              {/* Puerto Destino */}
-              <div className="relative">
-                <Label>Puerto Destino</Label>
-                <div className="flex items-center gap-2">
-                  <Input className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" value={form?.puertoDescarga?.nombre || ''} onChange={(e) => onPuertoNombreChange('puertoDescarga', e.target.value)} />
-                  {(form?.puertoDescarga?.ciudad || form?.puertoDescarga?.iata || form?.puertoDescarga?.unlocode) && (
-                    <div className="text-xs text-muted-foreground whitespace-nowrap">
-                      {form?.puertoDescarga?.ciudad || ''}
-                      {(form?.puertoDescarga?.iata || form?.puertoDescarga?.unlocode) && (
-                        <span> ({[form?.puertoDescarga?.iata, form?.puertoDescarga?.unlocode].filter(Boolean).join(' / ')})</span>
-                      )}
+              {/* Puerto Destino (no aplica para transporte terrestre) */}
+              {form?.tipoOperacion?.id !== 'transporte_terrestre' && (
+                <div className="relative">
+                  <Label>Puerto Destino</Label>
+                  <div className="flex items-center gap-2">
+                    <Input className="flex-1 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" value={form?.puertoDescarga?.nombre || ''} onChange={(e) => onPuertoNombreChange('puertoDescarga', e.target.value)} />
+                    {(form?.puertoDescarga?.ciudad || form?.puertoDescarga?.iata || form?.puertoDescarga?.unlocode) && (
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">
+                        {form?.puertoDescarga?.ciudad || ''}
+                        {(form?.puertoDescarga?.iata || form?.puertoDescarga?.unlocode) && (
+                          <span> ({[form?.puertoDescarga?.iata, form?.puertoDescarga?.unlocode].filter(Boolean).join(' / ')})</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {loadingSuggest.puertoDescarga && <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-8 text-muted-foreground" />}
+                  {suggestions.puertosDescarga?.length > 0 && (
+                    <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-sm max-h-52 overflow-auto">
+                      {suggestions.puertosDescarga.map(p => (
+                        <button type="button" key={p._id || p.id} className="w-full text-left px-3 py-2 hover:bg-accent" onClick={() => onSelectPuerto('puertoDescarga', p)}>
+                          <span className="font-medium">{p.nombre}</span>
+                          {p.ciudad ? <span className="text-muted-foreground"> — {p.ciudad}</span> : null}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
-                {loadingSuggest.puertoDescarga && <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-8 text-muted-foreground" />}
-                {suggestions.puertosDescarga?.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-sm max-h-52 overflow-auto">
-                    {suggestions.puertosDescarga.map(p => (
-                      <button type="button" key={p._id || p.id} className="w-full text-left px-3 py-2 hover:bg-accent" onClick={() => onSelectPuerto('puertoDescarga', p)}>
-                        <span className="font-medium">{p.nombre}</span>
-                        {p.ciudad ? <span className="text-muted-foreground"> — {p.ciudad}</span> : null}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
+          )}
+
+          {/* Ciudades (solo Transporte terrestre) */}
+          {form?.tipoOperacion?.id === 'transporte_terrestre' && (
+            <div className="md:col-span-2">
+              <h3 className="text-sm font-semibold mb-2 text-blue-600">Ciudades</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Recogida */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div>
+                    <Label>Departamento de recogida</Label>
+                    <Select
+                      value={form?.departamentoRecogida || ''}
+                      onValueChange={(v) => {
+                        handleChange('departamentoRecogida', v);
+                        handleChange('ciudadRecogida', ''); // limpiar ciudad al cambiar dpto
+                      }}
+                    >
+                      <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
+                        <SelectValue placeholder="Selecciona departamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(colombiaGeo).sort().map((d) => (
+                          <SelectItem key={d} value={d}>{d}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Ciudad de recogida</Label>
+                    <Select
+                      value={form?.ciudadRecogida || ''}
+                      onValueChange={(v) => handleChange('ciudadRecogida', v)}
+                      disabled={!form?.departamentoRecogida}
+                    >
+                      <SelectTrigger className="focus:ring-2 focus:ring-blue-500" disabled={!form?.departamentoRecogida}>
+                        <SelectValue placeholder={form?.departamentoRecogida ? 'Selecciona ciudad' : 'Selecciona departamento primero'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(colombiaGeo[form?.departamentoRecogida] || []).map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {/* Entrega */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div>
+                    <Label>Departamento de entrega</Label>
+                    <Select
+                      value={form?.departamentoEntrega || ''}
+                      onValueChange={(v) => {
+                        handleChange('departamentoEntrega', v);
+                        handleChange('ciudadEntrega', '');
+                      }}
+                    >
+                      <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
+                        <SelectValue placeholder="Selecciona departamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(colombiaGeo).sort().map((d) => (
+                          <SelectItem key={d} value={d}>{d}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Ciudad de entrega</Label>
+                    <Select
+                      value={form?.ciudadEntrega || ''}
+                      onValueChange={(v) => handleChange('ciudadEntrega', v)}
+                      disabled={!form?.departamentoEntrega}
+                    >
+                      <SelectTrigger className="focus:ring-2 focus:ring-blue-500" disabled={!form?.departamentoEntrega}>
+                        <SelectValue placeholder={form?.departamentoEntrega ? 'Selecciona ciudad' : 'Selecciona departamento primero'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(colombiaGeo[form?.departamentoEntrega] || []).map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Datos según tipo de operación */}

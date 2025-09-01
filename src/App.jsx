@@ -12,6 +12,8 @@ import IncotermsPage from '@/pages/parametrizacion/incoterms/IncotermsPage';
 import AirportsPage from '@/pages/parametrizacion/airports/AirportsPage';
 import OperationsPage from '@/pages/operations/OperationsPage';
 import LoginPage from '@/pages/LoginPage';
+import HomePublic from '@/pages/HomePublic';
+import Tracking from '@/pages/tracking/Tracking';
 import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import UsuariosPage from '@/pages/parametrizacion/usuarios/UsuariosPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
@@ -66,11 +68,18 @@ function AppContent() {
           </PublicRoute>
         } />
         
-        {/* Ruta raíz redirige según rol si autenticado, sino a login */}
+        {/* Página pública de inicio */}
         <Route path="/" element={
-          <ProtectedRoute>
-            <DefaultLanding />
-          </ProtectedRoute>
+          <PublicRoute>
+            <HomePublic />
+          </PublicRoute>
+        } />
+
+        {/* Tracking público */}
+        <Route path="/tracking" element={
+          <PublicRoute>
+            <Tracking />
+          </PublicRoute>
         } />
 
         {/* Rutas protegidas */}

@@ -77,6 +77,8 @@ const OperationDetailsModal = ({ isOpen, onClose, item }) => {
           <Row label="NIT" value={safe(item.cliente, 'nit')} />
           <Row label="Tipo Operación" value={safe(item.tipoOperacion || {}, 'nombre')} />
           <Row label="Vía" value={safe(item.via || {}, 'nombre')} />
+          <Row label="Ciudad de recogida" value={item.ciudadRecogida} />
+          <Row label="Ciudad de entrega" value={item.ciudadEntrega} />
           <Row label="Puerto Carga" value={safe(item.puertoCarga || {}, 'nombre')} />
           <Row label="Puerto Descarga" value={safe(item.puertoDescarga || {}, 'nombre')} />
           <Row label="Incoterm" value={item.incoterm} />

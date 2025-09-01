@@ -9,3 +9,10 @@ export const createStatus = async (payload) => {
   if (!res.ok) throw new Error('Error al crear estatus');
   return await res.json();
 };
+
+export const getStatusesByTracking = async (numtrazabilidad) => {
+  const url = `${API_URL}/statuses/by-tracking?numtrazabilidad=${encodeURIComponent(numtrazabilidad)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Error al obtener estatus');
+  return await res.json();
+};

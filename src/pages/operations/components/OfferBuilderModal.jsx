@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { listOfferConcepts } from '../Services/offers.services.jsx';
+import ConceptPickerModal from './ConceptPickerModal.jsx';
 import { Trash2 } from 'lucide-react';
 
 const toCurrency = (v) => {
@@ -16,45 +17,18 @@ const rowBase = { tipo: 'manual', concepto: '', montoUsd: 0, grupo: 'transporte'
 const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, readOnly = false }) => {
   const { toast } = useToast();
   const [items, setItems] = useState([]);
-  const [enableAduana, setEnableAduana] = useState(false);
-  const [enableTerrestre, setEnableTerrestre] = useState(false);
-  const [enableSeguro, setEnableSeguro] = useState(false);
+  // Section visibility is derived from items
   const [notas, setNotas] = useState('');
   const [conceptsTransporte, setConceptsTransporte] = useState([]);
   const [conceptsAduana, setConceptsAduana] = useState([]);
   const [conceptsTerrestre, setConceptsTerrestre] = useState([]);
   const [conceptsSeguro, setConceptsSeguro] = useState([]);
-  const [selTransporte, setSelTransporte] = useState('');
-  const [selAduana, setSelAduana] = useState('');
-  const [selTerrestre, setSelTerrestre] = useState('');
-  const [selSeguro, setSelSeguro] = useState('');
-  // Bulk add UI state
-  const [bulkOpen, setBulkOpen] = useState({ transporte: false, aduana: false, terrestre: false, seguro: false });
-  const [bulkSelected, setBulkSelected] = useState({ transporte: new Set(), aduana: new Set(), terrestre: new Set(), seguro: new Set() });
-  const [bulkSearch, setBulkSearch] = useState({ transporte: '', aduana: '', terrestre: '', seguro: '' });
+  // Concept picker modal state
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerGroup, setPickerGroup] = useState('transporte');
   const provider = initialDraft?.provider || operation?.cotizacionSeleccionadaProveedor || null;
 
-  // Filtered lists for bulk search
-  const conceptsTransporteFiltered = useMemo(() => {
-    const q = (bulkSearch.transporte || '').toLowerCase();
-    if (!q) return conceptsTransporte;
-    return conceptsTransporte.filter((c) => (c.concepto || '').toLowerCase().includes(q));
-  }, [conceptsTransporte, bulkSearch.transporte]);
-  const conceptsAduanaFiltered = useMemo(() => {
-    const q = (bulkSearch.aduana || '').toLowerCase();
-    if (!q) return conceptsAduana;
-    return conceptsAduana.filter((c) => (c.concepto || '').toLowerCase().includes(q));
-  }, [conceptsAduana, bulkSearch.aduana]);
-  const conceptsTerrestreFiltered = useMemo(() => {
-    const q = (bulkSearch.terrestre || '').toLowerCase();
-    if (!q) return conceptsTerrestre;
-    return conceptsTerrestre.filter((c) => (c.concepto || '').toLowerCase().includes(q));
-  }, [conceptsTerrestre, bulkSearch.terrestre]);
-  const conceptsSeguroFiltered = useMemo(() => {
-    const q = (bulkSearch.seguro || '').toLowerCase();
-    if (!q) return conceptsSeguro;
-    return conceptsSeguro.filter((c) => (c.concepto || '').toLowerCase().includes(q));
-  }, [conceptsSeguro, bulkSearch.seguro]);
+  // (Bulk/select state and filtered lists removed — using ConceptPickerModal instead)
 
   useEffect(() => {
     if (isOpen) {
@@ -65,9 +39,7 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
       }));
       setItems(incoming);
       setNotas(initialDraft?.notas || '');
-      setEnableAduana(incoming.some((i) => i.grupo === 'aduana'));
-      setEnableTerrestre(incoming.some((i) => i.grupo === 'terrestre'));
-      setEnableSeguro(incoming.some((i) => i.grupo === 'seguro'));
+      // visibility derived from items; no explicit flags
       // Cargar conceptos predefinidos por grupo
       (async () => {
         try {
@@ -93,10 +65,28 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
     const subtotalManualUsd = (items || []).filter(i => i.tipo === 'manual').reduce((a, b) => a + Number(b.montoUsd || 0), 0);
     return { subtotalCotizacionUsd, subtotalManualUsd, totalUsd: subtotalCotizacionUsd + subtotalManualUsd };
   }, [items]);
+  const hasAduana = useMemo(() => (items || []).some(i => i.grupo === 'aduana'), [items]);
+  const hasTerrestre = useMemo(() => (items || []).some(i => i.grupo === 'terrestre'), [items]);
+  const hasSeguro = useMemo(() => (items || []).some(i => i.grupo === 'seguro'), [items]);
 
   const addManual = (grupo = 'transporte') => setItems((prev) => [...prev, { ...rowBase, grupo }]);
   const removeItem = (idx) => setItems((prev) => prev.filter((_, i) => i !== idx));
   const updateItem = (idx, patch) => setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  // Sanitize decimal input to a user-friendly raw string (allow one decimal separator)
+  const sanitizeAmount = (v) => {
+    if (v === null || v === undefined) return '';
+    let s = String(v).replace(/,/g, '.');
+    s = s.replace(/[^0-9.]/g, '');
+    const firstDot = s.indexOf('.');
+    if (firstDot !== -1) {
+      s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, '');
+    }
+    return s;
+  };
+  const handleAmountChange = (idx, raw) => {
+    const val = sanitizeAmount(raw);
+    updateItem(idx, { montoUsd: val });
+  };
   const addConcept = (concept) => {
     if (!concept) return;
     setItems((prev) => [
@@ -109,40 +99,21 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
       },
     ]);
   };
-
-  const toggleBulk = (grupo) => setBulkOpen((s) => ({ ...s, [grupo]: !s[grupo] }));
-  const onBulkCheck = (grupo, id, checked) => {
-    setBulkSelected((s) => {
-      const next = new Set(s[grupo]);
-      if (checked) next.add(String(id)); else next.delete(String(id));
-      return { ...s, [grupo]: next };
-    });
-  };
-  const onBulkCheckAll = (grupo, list, checked) => {
-    setBulkSelected((s) => {
-      const next = new Set(s[grupo]);
-      if (checked) list.forEach((c) => next.add(String(c._id)));
-      else next.clear();
-      return { ...s, [grupo]: next };
-    });
-  };
-  const doBulkAdd = (grupo) => {
-    const map = {
-      transporte: conceptsTransporte,
-      aduana: conceptsAduana,
-      terrestre: conceptsTerrestre,
-      seguro: conceptsSeguro,
-    };
-    const selectedIds = Array.from(bulkSelected[grupo] || []);
-    const concepts = map[grupo].filter((c) => selectedIds.includes(String(c._id)));
-    if (!concepts.length) return;
+  const addConceptsFromPicker = (group, list) => {
+    if (!list || !list.length) return;
     setItems((prev) => ([
       ...prev,
-      ...concepts.map((c) => ({ tipo: c.tipo || 'manual', concepto: c.concepto, montoUsd: Number(c.montoUsd || 0), grupo: c.grupo || grupo })),
+      ...list.map((c) => ({ tipo: c.tipo || 'manual', concepto: c.concepto, montoUsd: Number(c.montoUsd || 0), grupo: group }))
     ]));
-    setBulkOpen((s) => ({ ...s, [grupo]: false }));
-    setBulkSelected((s) => ({ ...s, [grupo]: new Set() }));
   };
+  const conceptsMap = useMemo(() => ({
+    transporte: conceptsTransporte,
+    aduana: conceptsAduana,
+    terrestre: conceptsTerrestre,
+    seguro: conceptsSeguro,
+  }), [conceptsTransporte, conceptsAduana, conceptsTerrestre, conceptsSeguro]);
+
+  // (Old bulk handlers removed)
 
   const handleSave = async () => {
     try {
@@ -190,69 +161,28 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
               </div>
             </div>
 
-            <div className="mt-2 mb-3 flex flex-wrap gap-4 items-center">
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked readOnly /> Transporte internacional
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" disabled={readOnly} checked={enableAduana} onChange={(e) => setEnableAduana(e.target.checked)} /> Gastos de Aduana (opcional)
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" disabled={readOnly} checked={enableTerrestre} onChange={(e) => setEnableTerrestre(e.target.checked)} /> Transporte Terrestre (opcional)
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" disabled={readOnly} checked={enableSeguro} onChange={(e) => setEnableSeguro(e.target.checked)} /> Seguros (opcional)
-              </label>
-            </div>
-
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              <div>
-                <div className="text-gray-500">Notas</div>
-                <Input disabled={readOnly} value={notas} onChange={(e) => setNotas(e.target.value)} />
+            {!readOnly && (
+              <div className="mt-2 mb-3 flex flex-wrap gap-2 items-center">
+                <Button onClick={() => setPickerOpen(true)}>Agregar conceptos</Button>
+                <span className="text-xs text-gray-500">Selecciona múltiples conceptos por grupo</span>
               </div>
-            </div>
+            )}
+
+            {/* Bloque de notas generales removido: solo se mantienen las notas para el cliente al final */}
 
           {/* Sección: Transporte internacional */}
           <div className="border rounded-md overflow-hidden mb-4">
-            <div className="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs font-semibold">
-              <div>Transporte internacional</div>
+            <div className="flex items-center justify-between bg-primary/5 px-3 py-2 text-xs font-semibold border-l-4 border-primary">
+              <div className="text-primary">Transporte internacional</div>
               <div className="flex items-center gap-2">
-                <select className="border rounded px-2 py-1 text-xs" disabled={readOnly} value={selTransporte} onChange={(e) => setSelTransporte(e.target.value)}>
-                  <option value="">Seleccionar concepto</option>
-                  {conceptsTransporte.map((c) => (
-                    <option key={c._id || c.concepto} value={c._id}>{c.concepto} — ${toCurrency(c.montoUsd)} ({c.tipo})</option>
-                  ))}
-                </select>
-                {!readOnly && (<>
-                  <Button size="sm" variant="outline" onClick={() => { const c = conceptsTransporte.find(x => String(x._id) === String(selTransporte)); addConcept(c); }}>Agregar</Button>
-                  <Button size="sm" variant="outline" onClick={() => addManual('transporte')}>Agregar manual</Button>
-                  <Button size="sm" variant="outline" onClick={() => toggleBulk('transporte')}>{bulkOpen.transporte ? 'Cerrar selección' : 'Agregar varios'}</Button>
-                </>)}
+                {!readOnly && (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => addManual('transporte')}>Agregar manual</Button>
+                  </>
+                )}
               </div>
             </div>
-            {!readOnly && bulkOpen.transporte && (
-              <div className="px-3 py-2 border-b bg-gray-50">
-                <div className="flex items-center gap-2 mb-2">
-                  <Input className="h-8" placeholder="Buscar concepto" value={bulkSearch.transporte} onChange={(e) => setBulkSearch((s) => ({ ...s, transporte: e.target.value }))} />
-                  <Button size="sm" variant="secondary" onClick={() => doBulkAdd('transporte')}>Agregar seleccionados</Button>
-                </div>
-                <div className="max-h-48 overflow-auto border rounded">
-                  <div className="flex items-center gap-2 px-2 py-1 border-b bg-white sticky top-0">
-                    <input type="checkbox" onChange={(e) => onBulkCheckAll('transporte', conceptsTransporteFiltered, e.target.checked)} />
-                    <span className="text-xs text-gray-600">Seleccionar todos</span>
-                  </div>
-                  {conceptsTransporteFiltered.map((c) => (
-                    <label key={c._id} className="flex items-center justify-between px-2 py-1 text-sm hover:bg-gray-50">
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" checked={bulkSelected.transporte.has(String(c._id))} onChange={(e) => onBulkCheck('transporte', c._id, e.target.checked)} />
-                        <span>{c.concepto}</span>
-                      </div>
-                      <span className="text-xs text-gray-500">${toCurrency(c.montoUsd)}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Bulk UI removido en favor del modal de selección */}
             <div className="max-h-60 overflow-auto">
               <div className="grid grid-cols-12 px-3 py-2 text-xs font-semibold border-b sticky top-0 bg-white z-10">
                 <div className="col-span-8">Concepto</div>
@@ -265,7 +195,16 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
                     <Input value={it.concepto || ''} disabled={readOnly || it.tipo === 'cotizacion'} onChange={(e) => updateItem(idx, { concepto: e.target.value })} placeholder="Concepto" />
                   </div>
                   <div className="col-span-3">
-                    <Input className="text-right" value={toCurrency(it.montoUsd)} disabled={readOnly} onChange={(e) => updateItem(idx, { montoUsd: e.target.value.replace(/,/g, '.') })} placeholder="0.00" />
+                    <Input
+                      className="text-right"
+                      inputMode="decimal"
+                      type="text"
+                      pattern="[0-9]*[.,]?[0-9]*"
+                      value={typeof it.montoUsd === 'number' ? String(it.montoUsd) : (it.montoUsd || '')}
+                      disabled={readOnly}
+                      onChange={(e) => handleAmountChange(idx, e.target.value)}
+                      placeholder="0.00"
+                    />
                   </div>
                   <div className="col-span-1 text-right">
                     {!readOnly && (
@@ -280,47 +219,19 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
           </div>
 
           {/* Sección: Gastos de Aduana */}
-          {enableAduana && (
+          {hasAduana && (
             <div className="border rounded-md overflow-hidden mb-4">
-              <div className="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs font-semibold">
-                <div>Gastos de Aduana</div>
+              <div className="flex items-center justify-between bg-primary/5 px-3 py-2 text-xs font-semibold border-l-4 border-primary">
+                <div className="text-primary">Gastos de Aduana</div>
                 <div className="flex items-center gap-2">
-                  <select className="border rounded px-2 py-1 text-xs" disabled={readOnly} value={selAduana} onChange={(e) => setSelAduana(e.target.value)}>
-                    <option value="">Seleccionar concepto</option>
-                    {conceptsAduana.map((c) => (
-                      <option key={c._id || c.concepto} value={c._id}>{c.concepto} — ${toCurrency(c.montoUsd)} ({c.tipo})</option>
-                    ))}
-                  </select>
-                  {!readOnly && (<>
-                    <Button size="sm" variant="outline" onClick={() => { const c = conceptsAduana.find(x => String(x._id) === String(selAduana)); addConcept(c); }}>Agregar</Button>
-                    <Button size="sm" variant="outline" onClick={() => addManual('aduana')}>Agregar manual</Button>
-                    <Button size="sm" variant="outline" onClick={() => toggleBulk('aduana')}>{bulkOpen.aduana ? 'Cerrar selección' : 'Agregar varios'}</Button>
-                  </>)}
+                  {!readOnly && (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => addManual('aduana')}>Agregar manual</Button>
+                    </>
+                  )}
                 </div>
               </div>
-              {!readOnly && bulkOpen.aduana && (
-                <div className="px-3 py-2 border-b bg-gray-50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Input className="h-8" placeholder="Buscar concepto" value={bulkSearch.aduana} onChange={(e) => setBulkSearch((s) => ({ ...s, aduana: e.target.value }))} />
-                    <Button size="sm" variant="secondary" onClick={() => doBulkAdd('aduana')}>Agregar seleccionados</Button>
-                  </div>
-                  <div className="max-h-48 overflow-auto border rounded">
-                    <div className="flex items-center gap-2 px-2 py-1 border-b bg-white sticky top-0">
-                      <input type="checkbox" onChange={(e) => onBulkCheckAll('aduana', conceptsAduanaFiltered, e.target.checked)} />
-                      <span className="text-xs text-gray-600">Seleccionar todos</span>
-                    </div>
-                    {conceptsAduanaFiltered.map((c) => (
-                      <label key={c._id} className="flex items-center justify-between px-2 py-1 text-sm hover:bg-gray-50">
-                        <div className="flex items-center gap-2">
-                          <input type="checkbox" checked={bulkSelected.aduana.has(String(c._id))} onChange={(e) => onBulkCheck('aduana', c._id, e.target.checked)} />
-                          <span>{c.concepto}</span>
-                        </div>
-                        <span className="text-xs text-gray-500">${toCurrency(c.montoUsd)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Bulk UI removido en favor del modal de selección */}
               <div className="max-h-60 overflow-auto">
                 <div className="grid grid-cols-12 px-3 py-2 text-xs font-semibold border-b sticky top-0 bg-white z-10">
                   <div className="col-span-8">Concepto</div>
@@ -333,7 +244,16 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
                       <Input value={it.concepto || ''} disabled={readOnly} onChange={(e) => updateItem(idx, { concepto: e.target.value })} placeholder="Concepto" />
                     </div>
                     <div className="col-span-3">
-                      <Input className="text-right" value={toCurrency(it.montoUsd)} disabled={readOnly} onChange={(e) => updateItem(idx, { montoUsd: e.target.value.replace(/,/g, '.') })} placeholder="0.00" />
+                      <Input
+                        className="text-right"
+                        inputMode="decimal"
+                        type="text"
+                        pattern="[0-9]*[.,]?[0-9]*"
+                        value={typeof it.montoUsd === 'number' ? String(it.montoUsd) : (it.montoUsd || '')}
+                        disabled={readOnly}
+                        onChange={(e) => handleAmountChange(idx, e.target.value)}
+                        placeholder="0.00"
+                      />
                     </div>
                     <div className="col-span-1 text-right">
                       {!readOnly && (
@@ -349,47 +269,19 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
           )}
 
           {/* Sección: Transporte Terrestre */}
-          {enableTerrestre && (
+          {hasTerrestre && (
             <div className="border rounded-md overflow-hidden mb-4">
-              <div className="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs font-semibold">
-                <div>Transporte Terrestre</div>
+              <div className="flex items-center justify-between bg-primary/5 px-3 py-2 text-xs font-semibold border-l-4 border-primary">
+                <div className="text-primary">Transporte Terrestre</div>
                 <div className="flex items-center gap-2">
-                  <select className="border rounded px-2 py-1 text-xs" disabled={readOnly} value={selTerrestre} onChange={(e) => setSelTerrestre(e.target.value)}>
-                    <option value="">Seleccionar concepto</option>
-                    {conceptsTerrestre.map((c) => (
-                      <option key={c._id || c.concepto} value={c._id}>{c.concepto} — ${toCurrency(c.montoUsd)} ({c.tipo})</option>
-                    ))}
-                  </select>
-                  {!readOnly && (<>
-                    <Button size="sm" variant="outline" onClick={() => { const c = conceptsTerrestre.find(x => String(x._id) === String(selTerrestre)); addConcept(c); }}>Agregar</Button>
-                    <Button size="sm" variant="outline" onClick={() => addManual('terrestre')}>Agregar manual</Button>
-                    <Button size="sm" variant="outline" onClick={() => toggleBulk('terrestre')}>{bulkOpen.terrestre ? 'Cerrar selección' : 'Agregar varios'}</Button>
-                  </>)}
+                  {!readOnly && (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => addManual('terrestre')}>Agregar manual</Button>
+                    </>
+                  )}
                 </div>
               </div>
-              {!readOnly && bulkOpen.terrestre && (
-                <div className="px-3 py-2 border-b bg-gray-50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Input className="h-8" placeholder="Buscar concepto" value={bulkSearch.terrestre} onChange={(e) => setBulkSearch((s) => ({ ...s, terrestre: e.target.value }))} />
-                    <Button size="sm" variant="secondary" onClick={() => doBulkAdd('terrestre')}>Agregar seleccionados</Button>
-                  </div>
-                  <div className="max-h-48 overflow-auto border rounded">
-                    <div className="flex items-center gap-2 px-2 py-1 border-b bg-white sticky top-0">
-                      <input type="checkbox" onChange={(e) => onBulkCheckAll('terrestre', conceptsTerrestreFiltered, e.target.checked)} />
-                      <span className="text-xs text-gray-600">Seleccionar todos</span>
-                    </div>
-                    {conceptsTerrestreFiltered.map((c) => (
-                      <label key={c._id} className="flex items-center justify-between px-2 py-1 text-sm hover:bg-gray-50">
-                        <div className="flex items-center gap-2">
-                          <input type="checkbox" checked={bulkSelected.terrestre.has(String(c._id))} onChange={(e) => onBulkCheck('terrestre', c._id, e.target.checked)} />
-                          <span>{c.concepto}</span>
-                        </div>
-                        <span className="text-xs text-gray-500">${toCurrency(c.montoUsd)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Bulk UI removido en favor del modal de selección */}
               <div className="max-h-60 overflow-auto">
                 <div className="grid grid-cols-12 px-3 py-2 text-xs font-semibold border-b sticky top-0 bg-white z-10">
                   <div className="col-span-8">Concepto</div>
@@ -402,7 +294,16 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
                       <Input value={it.concepto || ''} disabled={readOnly} onChange={(e) => updateItem(idx, { concepto: e.target.value })} placeholder="Concepto" />
                     </div>
                     <div className="col-span-3">
-                      <Input className="text-right" value={toCurrency(it.montoUsd)} disabled={readOnly} onChange={(e) => updateItem(idx, { montoUsd: e.target.value.replace(/,/g, '.') })} placeholder="0.00" />
+                      <Input
+                        className="text-right"
+                        inputMode="decimal"
+                        type="text"
+                        pattern="[0-9]*[.,]?[0-9]*"
+                        value={typeof it.montoUsd === 'number' ? String(it.montoUsd) : (it.montoUsd || '')}
+                        disabled={readOnly}
+                        onChange={(e) => handleAmountChange(idx, e.target.value)}
+                        placeholder="0.00"
+                      />
                     </div>
                     <div className="col-span-1 text-right">
                       {!readOnly && (
@@ -418,47 +319,19 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
           )}
 
           {/* Sección: Seguros */}
-          {enableSeguro && (
+          {hasSeguro && (
             <div className="border rounded-md overflow-hidden mb-4">
-              <div className="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs font-semibold">
-                <div>Seguros</div>
+              <div className="flex items-center justify-between bg-primary/5 px-3 py-2 text-xs font-semibold border-l-4 border-primary">
+                <div className="text-primary">Seguros</div>
                 <div className="flex items-center gap-2">
-                  <select className="border rounded px-2 py-1 text-xs" disabled={readOnly} value={selSeguro} onChange={(e) => setSelSeguro(e.target.value)}>
-                    <option value="">Seleccionar concepto</option>
-                    {conceptsSeguro.map((c) => (
-                      <option key={c._id || c.concepto} value={c._id}>{c.concepto} — ${toCurrency(c.montoUsd)} ({c.tipo})</option>
-                    ))}
-                  </select>
-                  {!readOnly && (<>
-                    <Button size="sm" variant="outline" onClick={() => { const c = conceptsSeguro.find(x => String(x._id) === String(selSeguro)); addConcept(c); }}>Agregar</Button>
-                    <Button size="sm" variant="outline" onClick={() => addManual('seguro')}>Agregar manual</Button>
-                    <Button size="sm" variant="outline" onClick={() => toggleBulk('seguro')}>{bulkOpen.seguro ? 'Cerrar selección' : 'Agregar varios'}</Button>
-                  </>)}
+                  {!readOnly && (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => addManual('seguro')}>Agregar manual</Button>
+                    </>
+                  )}
                 </div>
               </div>
-              {!readOnly && bulkOpen.seguro && (
-                <div className="px-3 py-2 border-b bg-gray-50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Input className="h-8" placeholder="Buscar concepto" value={bulkSearch.seguro} onChange={(e) => setBulkSearch((s) => ({ ...s, seguro: e.target.value }))} />
-                    <Button size="sm" variant="secondary" onClick={() => doBulkAdd('seguro')}>Agregar seleccionados</Button>
-                  </div>
-                  <div className="max-h-48 overflow-auto border rounded">
-                    <div className="flex items-center gap-2 px-2 py-1 border-b bg-white sticky top-0">
-                      <input type="checkbox" onChange={(e) => onBulkCheckAll('seguro', conceptsSeguroFiltered, e.target.checked)} />
-                      <span className="text-xs text-gray-600">Seleccionar todos</span>
-                    </div>
-                    {conceptsSeguroFiltered.map((c) => (
-                      <label key={c._id} className="flex items-center justify-between px-2 py-1 text-sm hover:bg-gray-50">
-                        <div className="flex items-center gap-2">
-                          <input type="checkbox" checked={bulkSelected.seguro.has(String(c._id))} onChange={(e) => onBulkCheck('seguro', c._id, e.target.checked)} />
-                          <span>{c.concepto}</span>
-                        </div>
-                        <span className="text-xs text-gray-500">${toCurrency(c.montoUsd)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Bulk UI removido en favor del modal de selección */}
               <div className="max-h-60 overflow-auto">
                 <div className="grid grid-cols-12 px-3 py-2 text-xs font-semibold border-b sticky top-0 bg-white z-10">
                   <div className="col-span-8">Concepto</div>
@@ -471,7 +344,16 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
                       <Input value={it.concepto || ''} disabled={readOnly || it.tipo === 'cotizacion'} onChange={(e) => updateItem(idx, { concepto: e.target.value })} placeholder="Concepto" />
                     </div>
                     <div className="col-span-3">
-                      <Input className="text-right" value={toCurrency(it.montoUsd)} disabled={readOnly} onChange={(e) => updateItem(idx, { montoUsd: e.target.value.replace(/,/g, '.') })} placeholder="0.00" />
+                      <Input
+                        className="text-right"
+                        inputMode="decimal"
+                        type="text"
+                        pattern="[0-9]*[.,]?[0-9]*"
+                        value={typeof it.montoUsd === 'number' ? String(it.montoUsd) : (it.montoUsd || '')}
+                        disabled={readOnly}
+                        onChange={(e) => handleAmountChange(idx, e.target.value)}
+                        placeholder="0.00"
+                      />
                     </div>
                     <div className="col-span-1 text-right">
                       {!readOnly && (
@@ -496,8 +378,15 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
           </div>
 
           <div className="mt-4">
-            <div className="text-sm text-gray-500 mb-1">Notas</div>
-            <Input value={notas} disabled={readOnly} onChange={(e) => setNotas(e.target.value)} placeholder="Notas para el cliente" />
+            <div className="text-sm text-gray-500 mb-1">Notas para el cliente</div>
+            <textarea
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 resize-y min-h-[120px]"
+              value={notas}
+              disabled={readOnly}
+              onChange={(e) => setNotas(e.target.value)}
+              placeholder="Escribe las notas para el cliente aquí..."
+              rows={6}
+            />
           </div>
           </div>
 
@@ -505,6 +394,15 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
             <Button variant="outline" onClick={onClose}>{readOnly ? 'Cerrar' : 'Cancelar'}</Button>
             {!readOnly && <Button onClick={handleSave}>Guardar Oferta</Button>}
           </div>
+          {/* Concept Picker Modal */}
+          <ConceptPickerModal
+            isOpen={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            conceptsMap={conceptsMap}
+            defaultGroup={pickerGroup}
+            readOnly={readOnly}
+            onConfirm={(group, chosen) => addConceptsFromPicker(group, chosen)}
+          />
         </motion.div>
       </motion.div>
     </AnimatePresence>
