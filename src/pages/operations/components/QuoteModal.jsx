@@ -4,18 +4,43 @@ import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { fetchProviders } from '@/pages/parametrizacion/providers/Services/providers.services';
 
-const NumberInput = ({ label, value, onChange, step = '0.01' }) => (
-  <div className="flex flex-col gap-1">
-    <label className="text-sm text-blue-700 font-medium">{label}</label>
-    <input
-      type="number"
-      step={step}
-      value={value}
-      onChange={(e) => onChange(parseFloat(e.target.value || '0'))}
-      className="w-full rounded-md border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-3 py-2 bg-background"
-    />
-  </div>
-);
+const NumberInput = ({ label, value, onChange, step = '0.01', placeholder = '0.00' }) => {
+  const [inputValue, setInputValue] = useState('');
+
+  useEffect(() => {
+    // keep display empty if value is 0 or not a finite number
+    if (!Number.isFinite(value) || Number(value) === 0) {
+      setInputValue('');
+    } else {
+      setInputValue(String(value));
+    }
+  }, [value]);
+
+  const handleChange = (e) => {
+    const v = e.target.value;
+    // allow empty and partial decimals
+    setInputValue(v);
+    const normalized = v.replace(/,/g, '.');
+    const num = parseFloat(normalized);
+    onChange(isNaN(num) ? 0 : num);
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm text-blue-700 font-medium">{label}</label>
+      <input
+        type="text"
+        inputMode="decimal"
+        pattern="[0-9]*[.,]?[0-9]*"
+        step={step}
+        value={inputValue}
+        onChange={handleChange}
+        placeholder={placeholder}
+        className="w-full rounded-md border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-3 py-2 bg-background text-right"
+      />
+    </div>
+  );
+};
 
 const TextInput = ({ label, value, onChange, placeholder }) => (
   <div className="flex flex-col gap-1">
