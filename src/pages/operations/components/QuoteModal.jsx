@@ -47,7 +47,10 @@ const QuoteModal = ({ isOpen, onClose, onSave, operation }) => {
   const [loadingProviders, setLoadingProviders] = useState(false);
   const [form, setForm] = useState({
     providerId: '',
-    fleteUsd: 0,
+    cantidad: 0,
+    unidad: 'kg',
+    costoUnitarioUsd: 0,
+    tarifaMinimaUsd: 0,
     gastosOrigenUsd: 0,
     gastosDestinoUsd: 0,
     otrosGastosUsd: 0,
@@ -78,7 +81,10 @@ const QuoteModal = ({ isOpen, onClose, onSave, operation }) => {
     // reset when opening for a specific operation
     setForm({
       providerId: '',
-      fleteUsd: 0,
+      cantidad: 0,
+      unidad: 'kg',
+      costoUnitarioUsd: 0,
+      tarifaMinimaUsd: 0,
       gastosOrigenUsd: 0,
       gastosDestinoUsd: 0,
       otrosGastosUsd: 0,
@@ -88,13 +94,26 @@ const QuoteModal = ({ isOpen, onClose, onSave, operation }) => {
     });
   }, [isOpen, operation?._id]);
 
+  const fleteCalculado = useMemo(() => {
+    const cantidad = parseFloat(String(form.cantidad || 0));
+    const costo = parseFloat(String(form.costoUnitarioUsd || 0));
+    const valor = (isNaN(cantidad) ? 0 : cantidad) * (isNaN(costo) ? 0 : costo);
+    return Number.isFinite(valor) ? valor : 0;
+  }, [form.cantidad, form.costoUnitarioUsd]);
+
+  const fleteAplicado = useMemo(() => {
+    const minimo = parseFloat(String(form.tarifaMinimaUsd || 0));
+    const minVal = isNaN(minimo) ? 0 : minimo;
+    return Math.max(fleteCalculado, minVal);
+  }, [fleteCalculado, form.tarifaMinimaUsd]);
+
   const total = useMemo(() => {
-    const { fleteUsd, gastosOrigenUsd, gastosDestinoUsd, otrosGastosUsd } = form;
-    const sum = [fleteUsd, gastosOrigenUsd, gastosDestinoUsd, otrosGastosUsd]
+    const { gastosOrigenUsd, gastosDestinoUsd, otrosGastosUsd } = form;
+    const sum = [fleteAplicado, gastosOrigenUsd, gastosDestinoUsd, otrosGastosUsd]
       .map(v => parseFloat(String(v || 0)))
       .reduce((a, b) => a + (isNaN(b) ? 0 : b), 0);
     return Number.isFinite(sum) ? sum : 0;
-  }, [form]);
+  }, [form.gastosOrigenUsd, form.gastosDestinoUsd, form.otrosGastosUsd, fleteAplicado]);
 
   const handleChange = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -104,6 +123,7 @@ const QuoteModal = ({ isOpen, onClose, onSave, operation }) => {
     const prov = providers.find(p => (p._id || p.id) === form.providerId);
     const payload = {
       ...form,
+      fleteUsd: fleteAplicado,
       totalUsd: total,
       operationId: operation?._id,
       provider: prov ? { id: String(prov._id || prov.id), nombre: prov.nombre || prov.name, correo: prov.correo } : undefined,
@@ -128,7 +148,7 @@ const QuoteModal = ({ isOpen, onClose, onSave, operation }) => {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-          className="bg-card p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-blue-100 border-t-[6px] border-t-blue-600"
+          className="bg-card p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-blue-100 border-t-[6px] border-t-blue-600"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-between items-center mb-4">
@@ -153,10 +173,36 @@ const QuoteModal = ({ isOpen, onClose, onSave, operation }) => {
               </select>
             </div>
 
-            <NumberInput label="Flete (USD)" value={form.fleteUsd} onChange={(v) => handleChange('fleteUsd', v)} />
-            <NumberInput label="Gastos Origen (USD)" value={form.gastosOrigenUsd} onChange={(v) => handleChange('gastosOrigenUsd', v)} />
-            <NumberInput label="Gastos Destino (USD)" value={form.gastosDestinoUsd} onChange={(v) => handleChange('gastosDestinoUsd', v)} />
-            <NumberInput label="Otros Gastos (USD)" value={form.otrosGastosUsd} onChange={(v) => handleChange('otrosGastosUsd', v)} />
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-5 gap-4">
+              <NumberInput label="Cantidad" value={form.cantidad} onChange={(v) => handleChange('cantidad', v)} />
+              <div className="flex flex-col gap-1">
+                <label className="text-sm text-blue-700 font-medium">Unidad</label>
+                <select
+                  value={form.unidad}
+                  onChange={(e) => handleChange('unidad', e.target.value)}
+                  className="w-full rounded-md border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-3 py-2 bg-background"
+                >
+                  <option value="kg">kg</option>
+                  <option value="m3">m3</option>
+                </select>
+              </div>
+              <NumberInput label="Costo unitario (USD)" value={form.costoUnitarioUsd} onChange={(v) => handleChange('costoUnitarioUsd', v)} />
+              <NumberInput label="Tarifa mínima (USD)" value={form.tarifaMinimaUsd} onChange={(v) => handleChange('tarifaMinimaUsd', v)} />
+              <div className="flex flex-col gap-1">
+                <label className="text-sm text-blue-700 font-medium">Flete (USD)</label>
+                <input
+                  type="number"
+                  value={Number.isFinite(fleteAplicado) ? fleteAplicado.toFixed(2) : '0.00'}
+                  readOnly
+                  className="w-full rounded-md border border-blue-200 focus:outline-none px-3 py-2 bg-gray-100 text-gray-700"
+                />
+              </div>
+            </div>
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <NumberInput label="Gastos Origen (USD)" value={form.gastosOrigenUsd} onChange={(v) => handleChange('gastosOrigenUsd', v)} />
+              <NumberInput label="Gastos Destino (USD)" value={form.gastosDestinoUsd} onChange={(v) => handleChange('gastosDestinoUsd', v)} />
+              <NumberInput label="Otros Gastos (USD)" value={form.otrosGastosUsd} onChange={(v) => handleChange('otrosGastosUsd', v)} />
+            </div>
             <TextInput label="Tiempo de tránsito (días)" value={form.ttatDias} onChange={(v) => handleChange('ttatDias', v)} />
             <TextInput label="Ruta" value={form.ruta} onChange={(v) => handleChange('ruta', v)} />
             <div className="md:col-span-2">
