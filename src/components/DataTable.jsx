@@ -67,7 +67,7 @@ const DataTable = ({ data, columns, isLoading, onAction, page, limit, totalRecor
             <th key="table-actions-header" className="px-4 py-3 font-semibold text-foreground w-[120px]">
               {columns.find(col => col.key === 'opciones' || col.id === 'opciones') ? 'Opciones' : 'Acciones'}
             </th>
-            {columns.filter(column => column.key !== 'opciones' && column.id !== 'opciones').map((column, columnIndex) => (
+            {columns.filter(column => (column.key !== 'opciones' && column.id !== 'opciones' && column.key !== 'actions' && column.id !== 'actions')).map((column, columnIndex) => (
               <th key={column.id} className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap" style={{width: column.width || 'auto'}}>
                 {column.label}
               </th>
@@ -170,7 +170,7 @@ const DataTable = ({ data, columns, isLoading, onAction, page, limit, totalRecor
                     </div>
                   </td>
                 )}
-                {columns.filter(column => column.key !== 'opciones' && column.id !== 'opciones').map((column) => (
+                {columns.filter(column => (column.key !== 'opciones' && column.id !== 'opciones' && column.key !== 'actions' && column.id !== 'actions')).map((column) => (
                   <td key={`${row._id}-${column.id}`} className="px-4 py-2 whitespace-nowrap" style={{width: column.width || 'auto'}}>
                     {column.render ? column.render(row, column, cellRenderProps) : renderCellContent(row[column.id], column.type)}
                   </td>

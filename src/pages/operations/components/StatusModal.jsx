@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import {
   CheckCircle2,
   XCircle,
@@ -17,8 +18,17 @@ import {
   Ship,
   Plane,
   CalendarClock,
+  Copy,
+  Share2,
+  Globe,
+  AlertTriangle,
+  AlertOctagon,
+  Ban,
+  Skull,
+  Flame,
 } from 'lucide-react';
 import { createStatus, getStatusesByTracking } from '../Services/statuses.services';
+import { fetchStatusTemplates } from '@/pages/parametrizacion/status-templates/Services/status-templates.services.jsx';
 
 const StatusModal = ({ isOpen, onClose, operation, onApprove, onReject }) => {
   const [loading, setLoading] = useState(false);
@@ -28,6 +38,7 @@ const StatusModal = ({ isOpen, onClose, operation, onApprove, onReject }) => {
   const [descripcion, setDescripcion] = useState('');
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 16)); // yyyy-MM-ddTHH:mm
   const [icono, setIcono] = useState('CircleDot');
+  const [templates, setTemplates] = useState([]);
   const ICON_OPTIONS = useMemo(() => ([
     { key: 'CircleDot', label: 'Punto', Icon: CircleDot },
     { key: 'CheckCircle2', label: 'Completado', Icon: CheckCircle2 },
@@ -43,29 +54,88 @@ const StatusModal = ({ isOpen, onClose, operation, onApprove, onReject }) => {
     { key: 'CalendarClock', label: 'Agenda', Icon: CalendarClock },
   ]), []);
 
+  const NEGATIVE_ICON_OPTIONS = useMemo(() => ([
+    { key: 'AlertTriangle', label: 'Emergencia', Icon: AlertTriangle },
+    { key: 'AlertOctagon', label: 'Alerta', Icon: AlertOctagon },
+    { key: 'Ban', label: 'Cancelado', Icon: Ban },
+    { key: 'Skull', label: 'Peligro', Icon: Skull },
+    { key: 'Flame', label: 'Fuego', Icon: Flame },
+  ]), []);
+
   const isEnCurso = useMemo(() => operation?.estado === 'En curso', [operation]);
   const numtraz = operation?.numTrazabilidad;
+  const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!numtraz) return;
+    try {
+      await navigator.clipboard.writeText(String(numtraz));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+
+  const buildTrackingUrl = () => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const nit = operation?.cliente?.nit ? String(operation?.cliente?.nit) : '';
+    const params = new URLSearchParams({ numtrazabilidad: String(numtraz || '') });
+    if (nit) params.set('nit', nit);
+    return `${origin}/tracking?${params.toString()}`;
+  };
+
+  const handleShareLink = async () => {
+    if (!numtraz) return;
+    const url = buildTrackingUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    } catch {}
+  };
+
+  const handleShareWhatsapp = () => {
+    if (!numtraz) return;
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const nit = operation?.cliente?.nit ? String(operation?.cliente?.nit) : '';
+    const params = new URLSearchParams({ numtrazabilidad: String(numtraz) });
+    if (nit) params.set('nit', nit);
+    const trackingUrl = `${origin}/tracking?${params.toString()}`;
+    const text = encodeURIComponent(`N° de trazabilidad: ${numtraz}\nConsulta el estado aquí: ${trackingUrl}`);
+    const url = `https://wa.me/?text=${text}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!isOpen || !isEnCurso || !numtraz) return;
+      if (!isOpen || !numtraz) return;
       setLoading(true);
-      setError('');
       try {
         const resp = await getStatusesByTracking(numtraz);
-        if (resp.code === 200) {
-          setItems(Array.isArray(resp.data) ? resp.data : []);
-        } else {
-          setError(resp.message || 'No se pudo obtener estatus');
-        }
+        const items = resp?.data || resp || [];
+        setItems(Array.isArray(items) ? items : []);
       } catch (e) {
-        setError(e.message || 'Error al obtener estatus');
+        setItems([]);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [isOpen, isEnCurso, numtraz]);
+  }, [isOpen, numtraz]);
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      if (!isOpen) return;
+      try {
+        const res = await fetchStatusTemplates({ limit: 200, offset: 1, query: {} });
+        const list = res?.data || res?.items || [];
+        setTemplates(Array.isArray(list) ? list : []);
+      } catch (e) {
+        setTemplates([]);
+      }
+    };
+    loadTemplates();
+  }, [isOpen]);
 
   const handleAdd = async () => {
     if (!titulo?.trim()) {
@@ -168,16 +238,71 @@ const StatusModal = ({ isOpen, onClose, operation, onApprove, onReject }) => {
                   <>
                     <div className="mb-2">
                       <div className="text-sm text-muted-foreground">N° Trazabilidad</div>
-                      <div className="font-medium">{numtraz || '—'}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium">{numtraz || '—'}</div>
+                        {numtraz ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={handleCopy}
+                              className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-accent hover:text-accent-foreground"
+                              title="Copiar"
+                              aria-label="Copiar número de trazabilidad"
+                            >
+                              <Copy className="h-3.5 w-3.5" /> {copied ? 'Copiado' : 'Copiar'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleShareWhatsapp}
+                              className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-accent hover:text-accent-foreground"
+                              title="Compartir por WhatsApp"
+                              aria-label="Compartir por WhatsApp"
+                            >
+                              <Share2 className="h-3.5 w-3.5" /> WhatsApp
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleShareLink}
+                              className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-accent hover:text-accent-foreground"
+                              title={linkCopied ? 'URL copiada' : 'Copiar URL'}
+                              aria-label="Copiar URL"
+                            >
+                              <Globe className="h-3.5 w-3.5" /> URL
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                       <div className="md:col-span-5">
                         <div className="rounded border p-3">
                           <div className="grid grid-cols-1 gap-3">
                             <div>
-                              <label className="text-sm">Título</label>
+                              <label className="text-sm">Plantilla</label>
+                              <Select onValueChange={(val) => {
+                                const t = templates.find(x => String(x._id || x.id) === String(val));
+                                if (t) {
+                                  setTitulo(t.titulo || '');
+                                  setDescripcion(t.descripcion || '');
+                                  setIcono(t.icono || 'CircleDot');
+                                }
+                              }}>
+                                <SelectTrigger className="mt-1">
+                                  <SelectValue placeholder={templates.length ? 'Aplicar plantilla…' : 'Sin plantillas'} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {templates.map(t => (
+                                    <SelectItem key={t._id || t.id} value={String(t._id || t.id)}>
+                                      {t.titulo} {t.icono ? `(${t.icono})` : ''}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="text-sm text-slate-800 dark:text-slate-200">Título</label>
                               <input
-                                className="mt-1 w-full rounded border px-3 py-2 text-sm"
+                                className="mt-1 w-full rounded border px-3 py-2 text-sm bg-white text-slate-900 placeholder:text-slate-400 dark:bg-white/10 dark:text-white"
                                 value={titulo}
                                 onChange={(e) => setTitulo(e.target.value)}
                                 placeholder="Ej: Mercancía recogida"
@@ -206,20 +331,41 @@ const StatusModal = ({ isOpen, onClose, operation, onApprove, onReject }) => {
                               </div>
                             </div>
                             <div>
-                              <label className="text-sm">Fecha y hora</label>
+                              <label className="text-sm">Estados negativos</label>
+                              <div className="mt-1 grid grid-cols-6 gap-2">
+                                {NEGATIVE_ICON_OPTIONS.map(({ key, label, Icon }) => {
+                                  const selected = icono === key;
+                                  return (
+                                    <button
+                                      key={key}
+                                      type="button"
+                                      onClick={() => setIcono(key)}
+                                      disabled={loading}
+                                      className={`flex flex-col items-center justify-center rounded border px-2 py-2 hover:bg-accent hover:text-accent-foreground transition ${selected ? 'ring-2 ring-red-500 bg-accent text-accent-foreground' : ''}`}
+                                      title={label}
+                                    >
+                                      <Icon className="h-5 w-5 text-red-600" />
+                                      <span className="mt-1 text-[10px] leading-none">{label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-sm text-slate-800 dark:text-slate-200">Fecha y hora</label>
                               <input
                                 type="datetime-local"
-                                className="mt-1 w-full rounded border px-3 py-2 text-sm"
+                                className="mt-1 w-full rounded border px-3 py-2 text-sm bg-white text-slate-900 placeholder:text-slate-400 dark:bg-white/10 dark:text-white"
                                 value={fecha}
                                 onChange={(e) => setFecha(e.target.value)}
                                 disabled={loading}
                               />
                             </div>
                             <div>
-                              <label className="text-sm">Descripción</label>
+                              <label className="text-sm text-slate-800 dark:text-slate-200">Descripción</label>
                               <textarea
                                 rows={6}
-                                className="mt-1 w-full rounded border px-3 py-2 text-sm"
+                                className="mt-1 w-full rounded border px-3 py-2 text-sm bg-white text-slate-900 placeholder:text-slate-400 dark:bg-white/10 dark:text-white"
                                 value={descripcion}
                                 onChange={(e) => setDescripcion(e.target.value)}
                                 placeholder="Detalle opcional del evento"
@@ -257,6 +403,11 @@ const StatusModal = ({ isOpen, onClose, operation, onApprove, onReject }) => {
                                       case 'Truck': return Truck;
                                       case 'Package': return Package;
                                       case 'AlertCircle': return AlertCircle;
+                                      case 'AlertTriangle': return AlertTriangle;
+                                      case 'AlertOctagon': return AlertOctagon;
+                                      case 'Ban': return Ban;
+                                      case 'Skull': return Skull;
+                                      case 'Flame': return Flame;
                                       case 'Info': return Info;
                                       case 'Flag': return Flag;
                                       case 'MapPin': return MapPin;
@@ -267,10 +418,11 @@ const StatusModal = ({ isOpen, onClose, operation, onApprove, onReject }) => {
                                       default: return Circle;
                                     }
                                   })();
+                                  const isNegative = ['AlertTriangle', 'AlertOctagon', 'Ban', 'Skull', 'Flame'].includes(it.icono);
                                   return (
                                     <div key={it._id || it.fecha} className="relative">
-                                      <div className="absolute left-0 top-0.5 bg-white">
-                                        <Icon className="h-5 w-5 text-sky-600" />
+                                      <div className={`absolute left-0 top-0.5 bg-background rounded-full p-0.5 ${isNegative ? 'ring-2 ring-red-400' : ''}`}>
+                                        <Icon className={`h-5 w-5 ${isNegative ? 'text-red-600' : 'text-sky-600'}`} />
                                       </div>
                                       <div className="ml-8">
                                         <div className="text-sm font-medium">{it.titulo}</div>

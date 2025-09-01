@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,35 @@ function Tracking() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+
+  // Prefill from URL and auto-query when both params are present
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sp = new URLSearchParams(window.location.search);
+    const ntr = sp.get('numtrazabilidad') || sp.get('numTrazabilidad') || '';
+    const nitParam = sp.get('nit') || '';
+    if (ntr) setNumtrazabilidad(ntr);
+    if (nitParam) setNit(nitParam);
+    if (ntr && nitParam) {
+      (async () => {
+        setLoading(true);
+        setError('');
+        setResult(null);
+        try {
+          const resp = await getPublicStatuses(ntr.trim(), nitParam.trim());
+          if (resp.code === 200) {
+            setResult(resp.data);
+          } else {
+            setError(resp.message || 'No se encontró información');
+          }
+        } catch (err) {
+          setError(err.message || 'Error al consultar');
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -96,7 +125,7 @@ function Tracking() {
                   const Icon = ICON_MAP[it.icono] || Circle;
                   return (
                     <div key={it._id || it.fecha} className="relative">
-                      <div className="absolute -left-2 top-1.5 bg-white">
+                      <div className="absolute -left-2 top-1.5 bg-background rounded-full p-0.5">
                         <Icon className="h-4 w-4 text-sky-600" />
                       </div>
                       <div className="ml-5">

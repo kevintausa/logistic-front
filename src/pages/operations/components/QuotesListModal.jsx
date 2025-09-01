@@ -33,6 +33,7 @@ const QuotesListModal = ({ isOpen, onClose, operation, onSelect }) => {
   }, [isOpen, operation?._id]);
 
   const hasRows = useMemo(() => rows.length > 0, [rows]);
+  const selectedQuoteId = useMemo(() => operation?.cotizacionSeleccionadaId || operation?.cotizacionSeleccionada?._id, [operation?.cotizacionSeleccionadaId, operation?.cotizacionSeleccionada?._id]);
 
   if (!isOpen) return null;
 
@@ -82,8 +83,10 @@ const QuotesListModal = ({ isOpen, onClose, operation, onSelect }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((q) => (
-                    <tr key={q._id} className="hover:bg-blue-50/40">
+                  {rows.map((q) => {
+                    const isSelected = (q?._id && q._id === selectedQuoteId) || (q?.id && q.id === selectedQuoteId);
+                    return (
+                    <tr key={q._id} className={`hover:bg-blue-50/40 ${isSelected ? 'bg-green-50' : ''}`}>
                       <Cell>
                         <span title={q?.provider?.correo || ''}>
                           {q?.provider?.nombre || q.providerNombre || q.providerId}
@@ -98,12 +101,18 @@ const QuotesListModal = ({ isOpen, onClose, operation, onSelect }) => {
                       <Cell className="max-w-[180px] truncate" title={q.ruta || ''}>{q.ruta || '-'}</Cell>
                       <Cell className="max-w-[220px] truncate" title={q.nota || ''}>{q.nota || '-'}</Cell>
                       <Cell>
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => onSelect && onSelect(q)}>
-                          <Check className="h-4 w-4 mr-1" /> Seleccionar
-                        </Button>
+                        {isSelected ? (
+                          <Button size="sm" variant="secondary" disabled title="Cotización seleccionada">
+                            <Check className="h-4 w-4 mr-1 text-green-600" /> Seleccionada
+                          </Button>
+                        ) : (
+                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => onSelect && onSelect(q)}>
+                            <Check className="h-4 w-4 mr-1" /> Seleccionar
+                          </Button>
+                        )}
                       </Cell>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>

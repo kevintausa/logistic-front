@@ -123,6 +123,12 @@ const Navbar = () => {
           module: MODULES.OFFER_CONCEPTS,
         },
         {
+          name: 'Estados de Operación',
+          path: '/parametrizacion/estados-operacion',
+          icon: ClipboardList,
+          module: MODULES.STATUS_TEMPLATES,
+        },
+        {
           name: 'Proveedores',
           path: '/parametrizacion/proveedores',
           icon: Briefcase,

@@ -31,6 +31,7 @@ import ClientDocumentsPage from '@/pages/documents/ClientDocumentsPage';
 import GeneralDocumentsPage from '@/pages/documents/GeneralDocumentsPage';
 import DocumentTypesPage from '@/pages/parametrizacion/documentTypes/DocumentTypesPage';
 import OfferConceptsPage from '@/pages/parametrizacion/offer-concepts/OfferConceptsPage';
+import StatusTemplatesPage from '@/pages/parametrizacion/status-templates/StatusTemplatesPage';
 
 // Redirecciones simples al dashboard cuando el usuario está autenticado
 
@@ -149,6 +150,12 @@ function AppContent() {
         <Route path="/parametrizacion/conceptos-oferta" element={
           <ProtectedRoute requiredModule={MODULES.OFFER_CONCEPTS}>
             <OfferConceptsPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/parametrizacion/estados-operacion" element={
+          <ProtectedRoute requiredModule={MODULES.STATUS_TEMPLATES}>
+            <StatusTemplatesPage />
           </ProtectedRoute>
         } />
 
