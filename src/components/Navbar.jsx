@@ -57,6 +57,13 @@ const Navbar = () => {
     },
 
     {
+      name: 'Reportes',
+      path: '/reportes',
+      icon: <BarChart3 className="h-5 w-5" />,
+      module: MODULES.REPORTS
+    },
+
+    {
       name: 'Parametrización',
       path: '/parametrizacion',
       icon: <Settings className="h-5 w-5" />,

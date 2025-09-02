@@ -32,6 +32,7 @@ import GeneralDocumentsPage from '@/pages/documents/GeneralDocumentsPage';
 import DocumentTypesPage from '@/pages/parametrizacion/documentTypes/DocumentTypesPage';
 import OfferConceptsPage from '@/pages/parametrizacion/offer-concepts/OfferConceptsPage';
 import StatusTemplatesPage from '@/pages/parametrizacion/status-templates/StatusTemplatesPage';
+import ReportsPage from '@/pages/reports/ReportsPage';
 
 // Redirecciones simples al dashboard cuando el usuario está autenticado
 
@@ -163,6 +164,13 @@ function AppContent() {
         <Route path="/operaciones" element={
           <ProtectedRoute requiredModule={MODULES.OPERATIONS}>
             <OperationsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Reportes */}
+        <Route path="/reportes" element={
+          <ProtectedRoute requiredModule={MODULES.REPORTS}>
+            <ReportsPage />
           </ProtectedRoute>
         } />
 
