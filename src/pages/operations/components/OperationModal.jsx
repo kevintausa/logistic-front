@@ -362,6 +362,7 @@ const getDefaultsForType = (tipoId) => {
       { value: 'cajas', label: 'Cajas' },
       { value: 'drum', label: 'Drum' },
       { value: 'crates', label: 'Crates' },
+      { value: 'contenedor', label: 'Contenedor' },
       { value: 'otro', label: 'Otro' },
     ];
     const tipoMercanciaOpts = [
@@ -375,6 +376,17 @@ const getDefaultsForType = (tipoId) => {
       { value: '40_pies', label: '40 pies' },
       { value: 'open_top', label: 'Open Top' },
       { value: 'flat_rack', label: 'Flat Rack' },
+    ];
+
+    const incotermOpts = [
+      { value: 'EXW', label: 'EXW' },
+      { value: 'FCA', label: 'FCA' },
+      { value: 'FOB', label: 'FOB' },
+      { value: 'CIF', label: 'CIF' },
+      { value: 'CPT', label: 'CPT' },
+      { value: 'CFR', label: 'CFR' },
+      { value: 'DAP', label: 'DAP' },
+      { value: 'DDP', label: 'DDP' },
     ];
 
     // Agenciamiento aduanero
@@ -432,9 +444,14 @@ const getDefaultsForType = (tipoId) => {
       return (
         <div className="space-y-4">
           {t !== 'transporte_terrestre' && (
-            <div>
+            <div className="max-w-[220px]">
               <Label>Incoterm</Label>
-              <Input value={form?.incoterm || ''} onChange={(e) => handleChange('incoterm', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+              <SelectSimple
+                value={form?.incoterm || ''}
+                onValueChange={(v) => handleChange('incoterm', v)}
+                options={incotermOpts}
+                placeholder="Selecciona incoterm"
+              />
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -523,13 +540,18 @@ const getDefaultsForType = (tipoId) => {
 
     // FCL
     if (t === 'importacion_fcl' || t === 'exportacion_fcl') {
-      return (
-        <div className="space-y-4">
-          <div>
-            <Label>Incoterm</Label>
-            <Input value={form?.incoterm || ''} onChange={(e) => handleChange('incoterm', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          return (
+            <div className="space-y-4">
+              <div className="max-w-[220px]">
+                <Label>Incoterm</Label>
+                <SelectSimple
+                  value={form?.incoterm || ''}
+                  onValueChange={(v) => handleChange('incoterm', v)}
+                  options={incotermOpts}
+                  placeholder="Selecciona incoterm"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-2">
               <Label>Valor de la mercancía</Label>
               <div className="flex gap-2 items-center">
@@ -604,9 +626,14 @@ const getDefaultsForType = (tipoId) => {
     if (t === 'importacion_aerea' || t === 'exportacion_aerea') {
       return (
         <div className="space-y-4">
-          <div>
+          <div className="max-w-[220px]">
             <Label>Incoterm</Label>
-            <Input value={form?.incoterm || ''} onChange={(e) => handleChange('incoterm', e.target.value)} className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" />
+            <SelectSimple
+              value={form?.incoterm || ''}
+              onValueChange={(v) => handleChange('incoterm', v)}
+              options={incotermOpts}
+              placeholder="Selecciona incoterm"
+            />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>

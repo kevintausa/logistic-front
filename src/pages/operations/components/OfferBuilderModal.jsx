@@ -161,6 +161,32 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
               </div>
             </div>
 
+            {/* Detalles de la operación: Origen, Destino, Peso, Tipo de operación */}
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+              <div>
+                <div className="text-gray-500">Origen</div>
+                <div className="font-medium">
+                  {operation?.ciudadRecogida || operation?.puertoCarga?.nombre || '—'}
+                </div>
+              </div>
+              <div>
+                <div className="text-gray-500">Destino</div>
+                <div className="font-medium">
+                  {operation?.ciudadEntrega || operation?.puertoDescarga?.nombre || '—'}
+                </div>
+              </div>
+              <div>
+                <div className="text-gray-500">Peso</div>
+                <div className="font-medium">
+                  {operation?.pesoKg ? `${operation.pesoKg} kg` : (operation?.m3 ? `${operation.m3} m3` : '—')}
+                </div>
+              </div>
+              <div>
+                <div className="text-gray-500">Tipo Operación</div>
+                <div className="font-medium">{operation?.tipoOperacion?.nombre || '—'}</div>
+              </div>
+            </div>
+
             {!readOnly && (
               <div className="mt-2 mb-3 flex flex-wrap gap-2 items-center">
                 <Button onClick={() => setPickerOpen(true)}>Agregar conceptos</Button>

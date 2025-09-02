@@ -466,7 +466,7 @@ const OperationsPage = () => {
           <div className="flex items-center gap-4">
             <div className="bg-primary/10 p-3 rounded-lg"><ClipboardList className="h-8 w-8 text-primary" /></div>
             <div>
-              <CardTitle className="text-2xl">Operaciones</CardTitle>
+              <CardTitle className="text-2xl">Solicitudes y Operaciones </CardTitle>
               <CardDescription>Gestiona las operaciones.</CardDescription>
             </div>
           </div>

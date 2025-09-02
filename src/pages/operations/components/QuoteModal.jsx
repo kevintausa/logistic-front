@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { fetchProviders } from '@/pages/parametrizacion/providers/Services/providers.services';
 
 const NumberInput = ({ label, value, onChange, step = '0.01', placeholder = '0.00' }) => {
@@ -70,6 +70,7 @@ const TextArea = ({ label, value, onChange, rows = 3 }) => (
 const QuoteModal = ({ isOpen, onClose, onSave, operation }) => {
   const [providers, setProviders] = useState([]);
   const [loadingProviders, setLoadingProviders] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     providerId: '',
     cantidad: 0,
@@ -142,7 +143,7 @@ const QuoteModal = ({ isOpen, onClose, onSave, operation }) => {
 
   const handleChange = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // minimal validation
     if (!form.providerId) return; // Could show a toast outside
     const prov = providers.find(p => (p._id || p.id) === form.providerId);
@@ -154,7 +155,14 @@ const QuoteModal = ({ isOpen, onClose, onSave, operation }) => {
       provider: prov ? { id: String(prov._id || prov.id), nombre: prov.nombre || prov.name, correo: prov.correo } : undefined,
       providerNombre: prov?.nombre || prov?.name,
     };
-    onSave && onSave(payload);
+    try {
+      setSaving(true);
+      if (onSave) {
+        await Promise.resolve(onSave(payload));
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -241,8 +249,11 @@ const QuoteModal = ({ isOpen, onClose, onSave, operation }) => {
           </div>
 
           <div className="mt-6 flex justify-end gap-2">
-            <Button variant="ghost" onClick={onClose} className="text-blue-700 hover:bg-blue-50">Cancelar</Button>
-            <Button onClick={handleSubmit} className="bg-blue-600 hover:bg-blue-700 text-white">Guardar</Button>
+            <Button variant="ghost" onClick={onClose} disabled={saving} className="text-blue-700 hover:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed">Cancelar</Button>
+            <Button onClick={handleSubmit} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2">
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {saving ? 'Guardando...' : 'Guardar'}
+            </Button>
           </div>
         </motion.div>
       </motion.div>
