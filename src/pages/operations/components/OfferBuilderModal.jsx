@@ -142,48 +142,62 @@ const OfferBuilderModal = ({ isOpen, onClose, operation, initialDraft, onSave, r
           </div>
 
           <div className="flex-1 overflow-y-auto pr-1">
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
               <div>
                 <div className="text-gray-500">Cliente</div>
                 <div className="font-medium">{operation?.cliente?.nombre || operation?.clienteNombre}</div>
-              </div>
-              <div>
-                <div className="text-gray-500">Proveedor</div>
-                <div className="font-medium">{provider?.nombre || provider?.id || '—'}</div>
               </div>
               <div>
                 <div className="text-gray-500">Operación</div>
                 <div className="font-medium">{operation?.codigo || operation?._id}</div>
               </div>
               <div>
-                <div className="text-gray-500">Email Proveedor</div>
-                <div className="font-medium">{provider?.correo || '—'}</div>
+                <div className="text-gray-500">Tipo Operación</div>
+                <div className="font-medium">{operation?.tipoOperacion?.nombre || '—'}</div>
               </div>
             </div>
 
             {/* Detalles de la operación: Origen, Destino, Peso, Tipo de operación */}
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
               <div>
                 <div className="text-gray-500">Origen</div>
                 <div className="font-medium">
-                  {operation?.ciudadRecogida || operation?.puertoCarga?.nombre || '—'}
+                  {operation?.ciudadRecogida || operation?.puertoCarga  ?.ciudad || '—'} { ' - '}
+                  {operation?.puertoCarga?.nombre || '—'}
                 </div>
               </div>
               <div>
                 <div className="text-gray-500">Destino</div>
                 <div className="font-medium">
-                  {operation?.ciudadEntrega || operation?.puertoDescarga?.nombre || '—'}
+                  {operation?.ciudadEntrega || operation?.puertoDescarga?.ciudad || '—'} { ' - '}
+                  {operation?.puertoDescarga?.nombre || '—'}
                 </div>
               </div>
+              <div>
+                <div className="text-gray-500">Incoterm</div>
+                <div className="font-medium">{operation?.incoterm || '—'}</div>
+              </div>
+            </div>
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
               <div>
                 <div className="text-gray-500">Peso</div>
-                <div className="font-medium">
-                  {operation?.pesoKg ? `${operation.pesoKg} kg` : (operation?.m3 ? `${operation.m3} m3` : '—')}
-                </div>
+                <div className="font-medium">{operation?.especifico?.detalles?.peso || '—'} {operation?.especifico?.detalles?.pesoUnidad || '—'}</div>
               </div>
               <div>
-                <div className="text-gray-500">Tipo Operación</div>
-                <div className="font-medium">{operation?.tipoOperacion?.nombre || '—'}</div>
+                <div className="text-gray-500">Dimensiones</div>
+                <div className="font-medium">{operation?.especifico?.detalles?.ancho || '—'} x {operation?.especifico?.detalles?.alto || '—'} x {operation?.especifico?.detalles?.largo || '—'} {operation?.especifico?.detalles?.unidadMedida || '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">No piezas</div>
+                <div className="font-medium">{operation?.especifico?.detalles?.piezas || '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Tipo de Mercancia</div>
+                <div className="font-medium">{operation?.especifico?.tipoMercancia || '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Apilable</div>
+                <div className="font-medium">{operation?.especifico?.apilable ? 'Sí' : 'No'}</div>
               </div>
             </div>
 
