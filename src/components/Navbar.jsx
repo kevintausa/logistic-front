@@ -50,8 +50,8 @@ const Navbar = () => {
       module: MODULES.DOCUMENTATION
     },
     {
-      name: 'Operaciones',
-      path: '/operaciones',
+      name: 'Módulos',
+      path: '/operaciones/modulos',
       icon: <ClipboardList className="h-5 w-5" />,
       module: MODULES.OPERATIONS
     },

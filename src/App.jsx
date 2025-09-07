@@ -33,6 +33,14 @@ import DocumentTypesPage from '@/pages/parametrizacion/documentTypes/DocumentTyp
 import OfferConceptsPage from '@/pages/parametrizacion/offer-concepts/OfferConceptsPage';
 import StatusTemplatesPage from '@/pages/parametrizacion/status-templates/StatusTemplatesPage';
 import ReportsPage from '@/pages/reports/ReportsPage';
+import OperationsModulesPage from '@/pages/operations/OperationsModulesPage';
+import AirOperationPage from '@/pages/operations/types/AirOperationPage';
+import LCLOperationPage from '@/pages/operations/types/LCLOperationPage';
+import FCLOperationPage from '@/pages/operations/types/FCLOperationPage';
+import CustomsOperationPage from '@/pages/operations/types/CustomsOperationPage';
+import GroundTransportOperationPage from '@/pages/operations/types/GroundTransportOperationPage';
+import TriangulationOperationPage from '@/pages/operations/types/TriangulationOperationPage';
+import TariffsPage from '@/pages/operations/TariffsPage';
 
 // Redirecciones simples al dashboard cuando el usuario está autenticado
 
@@ -164,6 +172,57 @@ function AppContent() {
         <Route path="/operaciones" element={
           <ProtectedRoute requiredModule={MODULES.OPERATIONS}>
             <OperationsPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Operaciones - Módulos */}
+        <Route path="/operaciones/modulos" element={
+          <ProtectedRoute requiredModule={MODULES.OPERATIONS}>
+            <OperationsModulesPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Compatibilidad: mantener /operaciones/tipos apuntando a Módulos */}
+        <Route path="/operaciones/tipos" element={
+          <ProtectedRoute requiredModule={MODULES.OPERATIONS}>
+            <OperationsModulesPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Operaciones - Tipos específicos */}
+        <Route path="/operaciones/aereo" element={
+          <ProtectedRoute requiredModule={MODULES.OPERATIONS}>
+            <AirOperationPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/operaciones/lcl" element={
+          <ProtectedRoute requiredModule={MODULES.OPERATIONS}>
+            <LCLOperationPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/operaciones/fcl" element={
+          <ProtectedRoute requiredModule={MODULES.OPERATIONS}>
+            <FCLOperationPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/operaciones/aduana" element={
+          <ProtectedRoute requiredModule={MODULES.OPERATIONS}>
+            <CustomsOperationPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/operaciones/transporte-terrestre" element={
+          <ProtectedRoute requiredModule={MODULES.OPERATIONS}>
+            <GroundTransportOperationPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/operaciones/triangulacion" element={
+          <ProtectedRoute requiredModule={MODULES.OPERATIONS}>
+            <TriangulationOperationPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/operaciones/tarifas" element={
+          <ProtectedRoute requiredModule={MODULES.OPERATIONS}>
+            <TariffsPage />
           </ProtectedRoute>
         } />
 

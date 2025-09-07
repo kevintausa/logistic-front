@@ -25,7 +25,7 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear OperaciÃ
   const [errors, setErrors] = useState({});
   const [catalogs, setCatalogs] = useState({ tipos: [], asesores: [] });
   const [loadingCatalogs, setLoadingCatalogs] = useState(false);
-  const [suggestions, setSuggestions] = useState({ puertosCarga: [], puertosDescarga: [] });
+  const [suggestions, setSuggestions] = useState({ clientes: [], puertosCarga: [], puertosDescarga: [] });
   const [loadingSuggest, setLoadingSuggest] = useState({ cliente: false, puertoCarga: false, puertoDescarga: false, paisOrigen: false, ciudadOrigen: false, paisDestino: false, ciudadDestino: false });
 
   const debounceRef = useRef({});
@@ -192,32 +192,47 @@ const OperationModal = ({ isOpen, onClose, onSave, item, title = 'Crear OperaciÃ
     }
   };
 
-  // Buscar cliente por NIT y autocompletar
-  const onClienteNitChange = (value) => {
-    handleChange('cliente.nit', value);
-    if (!value || value.length < 3) return; // evita spam
+  // Buscar cliente por NOMBRE y mostrar sugerencias; al seleccionar, autocompletar NIT
+  const onClienteNombreChange = (value) => {
+    handleChange('cliente.nombre', value);
+    // Al tipear nombre, limpiar id y mantener NIT si ya estaba, se actualizarÃ¡ al seleccionar
+    handleChange('cliente.id', '');
+    if (!value || value.trim().length < 2) {
+      setSuggestions(prev => ({ ...prev, clientes: [] }));
+      return;
+    }
     setLoadingSuggest(prev => ({ ...prev, cliente: true }));
-    debounce('clienteNit', async () => {
+    const term = value.trim();
+    debounce('clienteNombre', async () => {
       try {
-        const res = await fetchClients({ limit: 1, offset: 1, query: { nit: value } });
+        const query = {
+          $or: [
+            { nombre: { $regex: term, $options: 'i' } },
+            { name: { $regex: term, $options: 'i' } },
+            { nit: { $regex: term, $options: 'i' } },
+          ],
+        };
+        const res = await fetchClients({ limit: 10, offset: 1, query });
         const items = res?.data?.items || res?.items || res?.data || [];
-        const found = Array.isArray(items) ? items[0] : null;
-        if (found) {
-          setForm(prev => ({
-            ...prev,
-            cliente: {
-              id: found._id || found.id || prev.cliente?.id || '',
-              nombre: found.nombre || found.name || prev.cliente?.nombre || '',
-              nit: found.nit || value,
-            }
-          }));
-        }
+        setSuggestions(prev => ({ ...prev, clientes: Array.isArray(items) ? items : [] }));
       } catch (e) {
-        console.error('Error buscando cliente por NIT', e);
+        console.error('Error buscando clientes por nombre', e);
       } finally {
         setLoadingSuggest(prev => ({ ...prev, cliente: false }));
       }
     });
+  };
+
+  const onSelectCliente = (cli) => {
+    setForm(prev => ({
+      ...prev,
+      cliente: {
+        id: cli._id || cli.id || prev?.cliente?.id || '',
+        nombre: cli.nombre || cli.name || '',
+        nit: cli.nit || cli.ruc || cli.documento || prev?.cliente?.nit || '',
+      },
+    }));
+    setSuggestions(prev => ({ ...prev, clientes: [] }));
   };
 
   // Sugerencias de puertos por nombre (carga/descarga)
@@ -762,16 +777,38 @@ const getDefaultsForType = (tipoId) => {
           <div className="md:col-span-2">
             <h3 className="text-sm font-semibold mb-2 text-blue-600">Cliente</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Cliente NIT</Label>
-                <div className="relative">
-                  <Input className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500" value={form?.cliente?.nit || ''} onChange={(e) => onClienteNitChange(e.target.value)} />
-                  {loadingSuggest.cliente && <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-2.5 text-muted-foreground" />}
-                </div>
+              <div className="relative">
+                <Label>Cliente Nombre</Label>
+                <Input
+                  className="focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                  value={form?.cliente?.nombre || ''}
+                  onChange={(e) => onClienteNombreChange(e.target.value)}
+                  placeholder="Buscar por nombre o NIT"
+                />
+                {loadingSuggest.cliente && (
+                  <Loader2 className="h-4 w-4 animate-spin absolute right-2 top-8 text-muted-foreground" />
+                )}
+                {Array.isArray(suggestions.clientes) && suggestions.clientes.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-sm max-h-60 overflow-auto">
+                    {suggestions.clientes.map((c) => (
+                      <button
+                        type="button"
+                        key={c._id || c.id}
+                        className="w-full text-left px-3 py-2 hover:bg-accent"
+                        onClick={() => onSelectCliente(c)}
+                      >
+                        <span className="font-medium">{c.nombre || c.name}</span>
+                        {c.nit || c.ruc || c.documento ? (
+                          <span className="text-muted-foreground"> â€” {c.nit || c.ruc || c.documento}</span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
-                <Label>Cliente Nombre</Label>
-                <Input value={form?.cliente?.nombre || ''} readOnly disabled className={cn('bg-muted text-muted-foreground')} />
+                <Label>Cliente NIT</Label>
+                <Input value={form?.cliente?.nit || ''} readOnly disabled className={cn('bg-muted text-muted-foreground')} />
                 {errors['cliente.nombre'] && <p className="text-sm text-destructive">{errors['cliente.nombre']}</p>}
               </div>
             </div>
