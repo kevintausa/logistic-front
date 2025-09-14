@@ -200,15 +200,9 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
     e.preventDefault();
     setLoading(true);
     try {
-      // Construir payload según especificación
-      const legacyId = form.tipo === 'importacion' ? 'importacion_aerea' : 'exportacion_aerea';
-      const legacyName = form.tipo === 'importacion' ? 'Importación Aérea' : 'Exportación Aérea';
       const payload = {
-        codigo: '', // backend generará si aplica
-        consecutivo: '',
-        estado: 'Pendiente',
+        tipo: form.tipo,
         cliente: form.cliente,
-        tipoOperacion: { id: legacyId, nombre: legacyName },
         incoterm: form.incoterm,
         asesor: form.asesor,
         puertoCarga: form.puertoCarga,
@@ -217,12 +211,18 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
         paisDestino: form.paisDestino,
         descripcion: form.descripcion,
         NoPiezas: Number(form.NoPiezas || 0) || 0,
+        pesoTotal: pesoTotal,
+        pesoVolumetrico: pesoVolumetrico,
         detalles: form.detalles.map(d => ({
-          ...d,
+          noPiezas: Number(d.noPiezas || 0) || 0,
           largo: Number(d.largo || 0) || 0,
           ancho: Number(d.ancho || 0) || 0,
           alto: Number(d.alto || 0) || 0,
+          unidadMedida: d.unidadMedida,
           peso: Number(d.peso || 0) || 0,
+          unidadPeso: d.unidadPeso,
+          tipoMercancia: d.tipoMercancia,
+          isApilable: d.isApilable,
         })),
       };
       const result = await createAirRequest(payload);

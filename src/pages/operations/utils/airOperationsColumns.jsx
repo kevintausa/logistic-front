@@ -1,0 +1,35 @@
+export const airOperationsColumns = [
+  { id: 'actions', label: 'Acciones', type: 'actions', actions: [
+    { key: 'view', label: 'Ver', icon: 'Eye', tooltip: 'Ver detalles', className: 'text-blue-600 hover:text-white hover:bg-blue-600' },
+    { key: 'requestQuote', label: 'Pedir Cotización', icon: 'Tag', tooltip: 'Solicitar cotización a proveedores', className: 'text-teal-600 hover:text-white hover:bg-teal-600' },
+  ] },
+  { id: 'codigo', label: 'Código', accessor: (row) => row.codigo, sortable: true },
+  { id: 'estado', label: 'Estado', accessor: (row) => row.estado, sortable: true },
+  { id: 'tipo', label: 'Tipo', accessor: (row) => row.tipo, sortable: true },
+  { id: 'clienteNombre', label: 'Cliente', accessor: (row) => row.cliente?.nombre || row.clienteNombre, sortable: true },
+  { id: 'incoterm', label: 'Incoterm', accessor: (row) => row.incoterm, sortable: true },
+  { id: 'asesorNombre', label: 'Asesor', accessor: (row) => row.asesor?.nombre || row.asesorNombre, sortable: true },
+  { id: 'puertoCargaNombre', label: 'Puerto Carga', accessor: (row) => row.puertoCarga?.nombre || row.puertoCargaNombre },
+  { id: 'puertoDescargaNombre', label: 'Puerto Descarga', accessor: (row) => row.puertoDescarga?.nombre || row.puertoDescargaNombre },
+  { id: 'paisOrigen', label: 'País Origen', accessor: (row) => row.paisOrigen },
+  { id: 'paisDestino', label: 'País Destino', accessor: (row) => row.paisDestino },
+  { id: 'NoPiezas', label: 'No. Piezas', accessor: (row) => row.NoPiezas },
+  { id: 'pesoTotal', label: 'Peso Total (kg)', accessor: (row) => row.pesoTotal },
+  { id: 'pesoVolumetrico', label: 'Peso Volumétrico (kg)', accessor: (row) => row.pesoVolumetrico },
+];
+
+export const airColumnsExcel = [
+  { header: 'Código', key: 'codigo' },
+  { header: 'Estado', key: 'estado' },
+  { header: 'Tipo', key: 'tipo' },
+  { header: 'Cliente', key: 'clienteNombre' },
+  { header: 'Incoterm', key: 'incoterm' },
+  { header: 'Asesor', key: 'asesorNombre' },
+  { header: 'Puerto Carga', key: 'puertoCargaNombre' },
+  { header: 'Puerto Descarga', key: 'puertoDescargaNombre' },
+  { header: 'País Origen', key: 'paisOrigen' },
+  { header: 'País Destino', key: 'paisDestino' },
+  { header: 'No. Piezas', key: 'NoPiezas' },
+  { header: 'Peso Total (kg)', key: 'pesoTotal' },
+  { header: 'Peso Volumétrico (kg)', key: 'pesoVolumetrico' },
+];

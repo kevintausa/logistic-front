@@ -22,14 +22,26 @@ export const createAirRequest = async (data) => {
   }
 };
 
-export const getAirOperations = async (params = {}) => {
+export const getAirOperations = async ({ limit = 10, offset = 1, query = {} } = {}) => {
   try {
-    const queryParams = new URLSearchParams(params).toString();
-    const response = await fetch(`${API_BASE_URL}/air-operations?${queryParams}`, {
+    // Backend expects 0-based page index for offset in skip(offset * limit)
+    const pageIndex = Math.max(0, Number(offset || 1) - 1);
+
+    const params = new URLSearchParams();
+    params.set('limit', String(limit));
+    params.set('offset', String(pageIndex));
+
+    // Map known filters to simple query params when possible
+    const { estado, tipo, asesorId, clienteId, search } = query || {};
+    if (estado && typeof estado === 'string') params.set('estado', estado);
+    if (tipo && typeof tipo === 'string') params.set('tipo', tipo);
+    if (asesorId && typeof asesorId === 'string') params.set('asesorId', asesorId);
+    if (clienteId && typeof clienteId === 'string') params.set('clienteId', clienteId);
+    if (search && typeof search === 'string') params.set('search', search);
+
+    const response = await fetch(`${API_BASE_URL}/air-operations?${params.toString()}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
     });
 
     if (!response.ok) {
@@ -37,7 +49,21 @@ export const getAirOperations = async (params = {}) => {
       throw new Error(errorData.message || 'Error al obtener las operaciones aéreas');
     }
 
-    return await response.json();
+    const json = await response.json();
+    // Controller returns: { success, message, data: { items, total } }
+    const items = json?.data?.items || [];
+    const total = json?.data?.total || 0;
+
+    // Normalize rows a bit for current table/exports
+    const normalized = items.map((row) => ({
+      ...row,
+      clienteNombre: row?.cliente?.nombre,
+      asesorNombre: row?.asesor?.nombre,
+      puertoCargaNombre: row?.puertoCarga?.nombre,
+      puertoDescargaNombre: row?.puertoDescarga?.nombre,
+    }));
+
+    return { data: normalized, totalRecords: total };
   } catch (error) {
     console.error('Error fetching air operations:', error);
     throw error;
@@ -149,4 +175,19 @@ export const getAirOperationStats = async () => {
     console.error('Error fetching air operation stats:', error);
     throw error;
   }
+};
+
+// Export helper similar to exportOperations but for air operations
+export const exportAirOperations = async ({ query = {} } = {}) => {
+  // Fetch a large page to export (adjust as needed or implement server-side export later)
+  const { data } = await getAirOperations({ limit: 10000, offset: 1, query });
+  // Flatten to match columnsExcel keys currently used in UI
+  return (data || []).map((row) => ({
+    ...row,
+    clienteNombre: row?.cliente?.nombre || row?.clienteNombre,
+    puertoCargaNombre: row?.puertoCarga?.nombre || row?.puertoCargaNombre,
+    puertoDescargaNombre: row?.puertoDescarga?.nombre || row?.puertoDescargaNombre,
+    // Air operations do not have tipoOperacion; leave empty for now
+    tipoOperacionNombre: row?.tipo || '',
+  }));
 };

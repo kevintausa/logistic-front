@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import OperationModuleBase from '@/components/operations/OperationModuleBase';
-import { operationsColumns, columnsExcel } from '@/pages/operations/utils/operationsColumns';
-import { fetchOperations, exportOperations, createOperation } from '@/pages/operations/Services/operations.services';
+import { airOperationsColumns, airColumnsExcel } from '@/pages/operations/utils/airOperationsColumns';
+import { getAirOperations, exportAirOperations, createAirRequest } from '@/pages/operations/services/air-requests.services';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import AirOperationModal from '@/pages/operations/components/air/AirOperationModal';
+import AirOperationDetails from '@/pages/operations/components/air/AirOperationDetails';
+import RequestQuoteModal from '@/pages/operations/components/air/RequestQuoteModal';
 import { useToast } from '@/components/ui/use-toast';
 import { useState, useCallback } from 'react';
 
@@ -20,6 +22,10 @@ export default function AirOperationPage() {
 
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isQuoteOpen, setIsQuoteOpen] = useState(false);
+  const [selectedOperation, setSelectedOperation] = useState(null);
+  const [selectedOperationId, setSelectedOperationId] = useState(null);
   // refresh tokens por sección
   const [refreshInitial, setRefreshInitial] = useState(0);
   const [refreshInCourse] = useState(0);
@@ -28,20 +34,25 @@ export default function AirOperationPage() {
   const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
   const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
 
+  const handleAction = useCallback((actionKey, row) => {
+    if (actionKey === 'view') {
+      setSelectedOperation(row || null);
+      setSelectedOperationId(row?._id || null);
+      setIsDetailsOpen(true);
+    } else if (actionKey === 'requestQuote') {
+      setSelectedOperation(row || null);
+      setIsQuoteOpen(true);
+    }
+  }, []);
+
   const handleSaveItem = useCallback(async (payload) => {
     try {
-      // En Aéreo, se espera tipoOperacion importacion_aerea/exportacion_aerea desde el modal
-      const resp = await createOperation(payload);
-      if (resp?.code === 201) {
-        toast({ title: 'Solicitud creada', description: 'Se creó la solicitud aérea.' });
-      } else {
-        throw new Error(resp?.message || 'Error al crear la solicitud');
-      }
+      // El modal ya creó la solicitud (onSave recibe result.data). Solo notificar y refrescar.
+      toast({ title: 'Solicitud creada', description: 'Se creó la solicitud aérea.' });
       setIsModalOpen(false);
-      // Solo refrescar la sección de iniciales
       setRefreshInitial((n) => n + 1);
     } catch (e) {
-      toast({ title: 'Error', description: e.message || 'No se pudo crear la solicitud.', variant: 'destructive' });
+      toast({ title: 'Error', description: e.message || 'No se pudo procesar la solicitud.', variant: 'destructive' });
     }
   }, [toast]);
 
@@ -60,17 +71,17 @@ export default function AirOperationPage() {
       <OperationModuleBase
         title="Solicitudes"
         description="Operaciones en estados iniciales."
-        columns={operationsColumns}
+        columns={airOperationsColumns}
         filterFields={FILTER_FIELDS}
-        fetchService={fetchOperations}
-        exportService={exportOperations}
-        columnsExcel={columnsExcel}
+        fetchService={getAirOperations}
+        exportService={exportAirOperations}
+        columnsExcel={airColumnsExcel}
         fileName="operaciones_aereo"
+        onAction={handleAction}
         enforcedFilters={{
-          'tipoOperacion.id': { $in: ['importacion_aerea', 'exportacion_aerea'] },
           'estado': { $in: ['Pendiente', 'Tarifa Seleccionada', 'Pendiente de Aprobación', 'Oferta enviada', 'Oferta Rechazada'] },
         }}
-        hiddenFilterKeys={['tipoOperacion.id', 'estado']}
+        hiddenFilterKeys={['estado']}
         refreshToken={refreshInitial}
         renderHeaderActions={() => (
           <div className="flex gap-2">
@@ -84,17 +95,17 @@ export default function AirOperationPage() {
         <OperationModuleBase
           title="En curso"
           description="Operaciones actualmente en curso."
-          columns={operationsColumns}
+          columns={airOperationsColumns}
           filterFields={FILTER_FIELDS}
-          fetchService={fetchOperations}
-          exportService={exportOperations}
-          columnsExcel={columnsExcel}
+          fetchService={getAirOperations}
+          exportService={exportAirOperations}
+          columnsExcel={airColumnsExcel}
           fileName="operaciones_aereo_en_curso"
+          onAction={handleAction}
           enforcedFilters={{
-            'tipoOperacion.id': { $in: ['importacion_aerea', 'exportacion_aerea'] },
             'estado': 'En curso',
           }}
-          hiddenFilterKeys={['tipoOperacion.id', 'estado']}
+          hiddenFilterKeys={['estado']}
           refreshToken={refreshInCourse}
         />
       </div>
@@ -104,17 +115,17 @@ export default function AirOperationPage() {
         <OperationModuleBase
           title="Finalizadas"
           description="Operaciones finalizadas o canceladas."
-          columns={operationsColumns}
+          columns={airOperationsColumns}
           filterFields={FILTER_FIELDS}
-          fetchService={fetchOperations}
-          exportService={exportOperations}
-          columnsExcel={columnsExcel}
+          fetchService={getAirOperations}
+          exportService={exportAirOperations}
+          columnsExcel={airColumnsExcel}
           fileName="operaciones_aereo_finalizadas"
+          onAction={handleAction}
           enforcedFilters={{
-            'tipoOperacion.id': { $in: ['importacion_aerea', 'exportacion_aerea'] },
             'estado': { $in: ['Finalizada', 'Cancelada'] },
           }}
-          hiddenFilterKeys={['tipoOperacion.id', 'estado']}
+          hiddenFilterKeys={['estado']}
           refreshToken={refreshFinal}
         />
       </div>
@@ -124,6 +135,19 @@ export default function AirOperationPage() {
         onClose={handleCloseModal}
         onSave={handleSaveItem}
         title="Crear Solicitud Aérea"
+      />
+
+      <AirOperationDetails
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        operation={selectedOperation}
+        operationId={selectedOperationId}
+      />
+
+      <RequestQuoteModal
+        isOpen={isQuoteOpen}
+        onClose={() => setIsQuoteOpen(false)}
+        operation={selectedOperation}
       />
     </div>
   );
