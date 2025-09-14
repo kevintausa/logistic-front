@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
-import { getAirOperationById } from '@/pages/operations/services/air-requests.services';
+import { getAirOperationById } from '@/pages/operations/Services/air-requests.services';
 
 export default function AirOperationDetails({ isOpen, onClose, operation, operationId }) {
   const [loading, setLoading] = useState(false);

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send } from 'lucide-react';
 import { fetchProviders } from '@/pages/parametrizacion/providers/Services/providers.services';
-import { sendEmail } from '@/pages/operations/services/email.services';
+import { sendEmail } from '@/pages/operations/Services/email.services';
 
 export default function RequestQuoteModal({ isOpen, onClose, operation }) {
   const [loading, setLoading] = useState(false);

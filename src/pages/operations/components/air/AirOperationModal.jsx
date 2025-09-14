@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { X, Plus, Trash2, Loader2 } from 'lucide-react';
 import { fetchUsers } from '@/pages/parametrizacion/usuarios/Services/users.services';
 import { fetchClients } from '@/pages/parametrizacion/clients/Services/clients.services';
-import { searchAirports, getUniqueCountries } from '@/pages/operations/services/airports.services';
-import { createAirRequest } from '@/pages/operations/services/air-requests.services';
+import { searchAirports, getUniqueCountries } from '@/pages/operations/Services/airports.services';
+import { createAirRequest } from '@/pages/operations/Services/air-requests.services';
 
 const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud Aérea' }) => {
   const [loading, setLoading] = useState(false);
