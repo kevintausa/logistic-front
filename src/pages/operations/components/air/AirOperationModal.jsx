@@ -63,6 +63,32 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
     }, 0);
   }, [form.detalles]);
 
+  // Validación de campos requeridos
+  const isFormValid = useMemo(() => {
+    // Campos principales requeridos
+    const mainFieldsValid = form.tipo && 
+                           form.cliente.id && 
+                           form.incoterm && 
+                           form.asesor.id && 
+                           form.puertoCarga.id && 
+                           form.puertoDescarga.id && 
+                           form.paisOrigen && 
+                           form.paisDestino && 
+                           form.descripcion;
+
+    // Validar que al menos un detalle esté completo
+    const detallesValid = form.detalles.length > 0 && 
+                         form.detalles.some(detalle => 
+                           detalle.largo && 
+                           detalle.ancho && 
+                           detalle.alto && 
+                           detalle.peso && 
+                           detalle.noPiezas
+                         );
+
+    return mainFieldsValid && detallesValid;
+  }, [form]);
+
   useEffect(() => {
     if (!isOpen) return;
     const load = async () => {
@@ -477,7 +503,7 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
           </div>
           <div className="p-3 border-t flex items-center justify-end gap-2 flex-shrink-0">
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !isFormValid}>
               {loading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando...</>) : 'Guardar'}
             </Button>
           </div>
