@@ -1,7 +1,8 @@
-import { API_BASE_URL } from '../../../config/api';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export const sendEmail = async ({ to, subject, html, text }) => {
-  const response = await fetch(`${API_BASE_URL}/email/send`, {
+  const response = await fetch(`${API_URL}/email/send`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ to, subject, html, text }),

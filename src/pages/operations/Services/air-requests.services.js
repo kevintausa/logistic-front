@@ -1,8 +1,9 @@
-import { API_BASE_URL } from '../../../config/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 
 export const createAirRequest = async (data) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/air-operations`, {
+    const response = await fetch(`${API_URL}/air-operations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -39,7 +40,7 @@ export const getAirOperations = async ({ limit = 10, offset = 1, query = {} } = 
     if (clienteId && typeof clienteId === 'string') params.set('clienteId', clienteId);
     if (search && typeof search === 'string') params.set('search', search);
 
-    const response = await fetch(`${API_BASE_URL}/air-operations?${params.toString()}`, {
+    const response = await fetch(`${API_URL}/air-operations?${params.toString()}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -72,7 +73,7 @@ export const getAirOperations = async ({ limit = 10, offset = 1, query = {} } = 
 
 export const getAirOperationById = async (id) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/air-operations/${id}`, {
+    const response = await fetch(`${API_URL}/air-operations/${id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -93,7 +94,7 @@ export const getAirOperationById = async (id) => {
 
 export const updateAirOperation = async (id, data) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/air-operations/${id}`, {
+    const response = await fetch(`${API_URL}/air-operations/${id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -115,7 +116,7 @@ export const updateAirOperation = async (id, data) => {
 
 export const updateAirOperationStatus = async (id, estado) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/air-operations/${id}/status`, {
+    const response = await fetch(`${API_URL}/air-operations/${id}/status`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -137,7 +138,7 @@ export const updateAirOperationStatus = async (id, estado) => {
 
 export const deleteAirOperation = async (id) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/air-operations/${id}`, {
+    const response = await fetch(`${API_URL}/air-operations/${id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -158,7 +159,7 @@ export const deleteAirOperation = async (id) => {
 
 export const getAirOperationStats = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/air-operations/stats`, {
+    const response = await fetch(`${API_URL}/air-operations/stats`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
