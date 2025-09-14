@@ -4,15 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, Loader2, Plus, Minus } from 'lucide-react';
+import { X, Plus, Trash2, Loader2 } from 'lucide-react';
 import { fetchUsers } from '@/pages/parametrizacion/usuarios/Services/users.services';
 import { fetchClients } from '@/pages/parametrizacion/clients/Services/clients.services';
-import { fetchLoadingPorts } from '@/pages/parametrizacion/loading-ports/Services/loading-ports.services';
+import { searchAirports, getUniqueCountries } from '@/pages/operations/services/airports.services';
+import { createAirRequest } from '@/pages/operations/services/air-requests.services';
 
 const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud Aérea' }) => {
   const [loading, setLoading] = useState(false);
   const [catalogs, setCatalogs] = useState({ asesores: [] });
-  const [suggestions, setSuggestions] = useState({ clientes: [], carga: [], descarga: [] });
+  const [suggestions, setSuggestions] = useState({ clientes: [], paisOrigen: [], paisDestino: [] });
+  const [airportOptions, setAirportOptions] = useState({ carga: [], descarga: [] });
 
   const [form, setForm] = useState({
     tipo: 'importacion',
@@ -21,12 +23,45 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
     asesor: { id: '', nombre: '', correo: '' },
     puertoCarga: { id: '', nombre: '' },
     puertoDescarga: { id: '', nombre: '' },
+    paisOrigen: '',
+    paisDestino: '',
     descripcion: '',
     NoPiezas: '',
     detalles: [
-      { largo: '', ancho: '', alto: '', unidadMedida: 'cm', peso: '', unidadPeso: 'kg', tipoMercancia: 'general', isApilable: false }
+      { largo: '', ancho: '', alto: '', unidadMedida: 'cm', peso: '', unidadPeso: 'kg', tipoMercancia: 'general', isApilable: 'Si', noPiezas: '' }
     ]
   });
+
+  // Cálculos automáticos
+  const pesoTotal = useMemo(() => {
+    return form.detalles.reduce((total, detalle) => {
+      const peso = parseFloat(detalle.peso) || 0;
+      const piezas = parseFloat(detalle.noPiezas) || 1;
+      return total + (peso * piezas);
+    }, 0);
+  }, [form.detalles]);
+
+  const pesoVolumetrico = useMemo(() => {
+    return form.detalles.reduce((total, detalle) => {
+      const largo = parseFloat(detalle.largo) || 0;
+      const ancho = parseFloat(detalle.ancho) || 0;
+      const alto = parseFloat(detalle.alto) || 0;
+      const piezas = parseFloat(detalle.noPiezas) || 1;
+      
+      // Convertir dimensiones a metros si están en cm
+      const factor = detalle.unidadMedida === 'cm' ? 0.01 : 
+                   detalle.unidadMedida === 'in' ? 0.0254 : 
+                   detalle.unidadMedida === 'ft' ? 0.3048 : 1;
+      
+      const largoM = largo * factor;
+      const anchoM = ancho * factor;
+      const altoM = alto * factor;
+      
+      // Peso volumétrico = (L x A x H en metros) x 167 kg/m³ (factor estándar aéreo)
+      const pesoVolPorPieza = (largoM * anchoM * altoM) * 167;
+      return total + (pesoVolPorPieza * piezas);
+    }, 0);
+  }, [form.detalles]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -67,19 +102,66 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
 
   const onPortSearch = async (scope, term) => {
     if (!term || term.trim().length < 2) { setSuggestions(s => ({ ...s, [scope]: [] })); return; }
-    const base = { tipo: 'aeropuerto', $or: [
-      { nombre: { $regex: term, $options: 'i' } },
-      { ciudad: { $regex: term, $options: 'i' } },
-      { iata: { $regex: term, $options: 'i' } },
-      { unlocode: { $regex: term, $options: 'i' } },
-    ]};
-    const res = await fetchLoadingPorts({ limit: 10, offset: 1, query: base });
-    const items = res?.data?.items || res?.items || res?.data || [];
-    setSuggestions(prev => ({ ...prev, [scope]: items }));
+    try {
+      // Get the selected country to filter airports
+      const selectedCountry = scope === 'carga' ? form.paisOrigen : form.paisDestino;
+      
+      let searchParams = { name: term, limit: 10 };
+      if (selectedCountry) {
+        searchParams.country = selectedCountry;
+      }
+      
+      const res = await searchAirports(searchParams);
+      const items = res?.data || [];
+      setSuggestions(prev => ({ ...prev, [scope]: items }));
+    } catch (error) {
+      console.error('Error searching airports:', error);
+      setSuggestions(prev => ({ ...prev, [scope]: [] }));
+    }
+  };
+
+  const onCountrySearch = async (scope, term) => {
+    if (!term || term.trim().length < 2) { setSuggestions(s => ({ ...s, [scope]: [] })); return; }
+    try {
+      const res = await getUniqueCountries(term, 10);
+      const countries = res?.data || [];
+      setSuggestions(prev => ({ ...prev, [scope]: countries }));
+    } catch (error) {
+      console.error('Error searching countries:', error);
+      setSuggestions(prev => ({ ...prev, [scope]: [] }));
+    }
+  };
+
+  const onCountrySelect = async (scope, country) => {
+    // Update the country field
+    update(scope, country);
+    
+    // Clear country suggestions
+    setSuggestions(s => ({ ...s, [scope]: [] }));
+    
+    // Load airports for the selected country and populate dropdown options
+    try {
+      const res = await searchAirports({ country, limit: 50 });
+      const airports = res?.data || [];
+      
+      if (scope === 'paisOrigen') {
+        // Clear the airport field and populate options
+        update('puertoCarga.nombre', '');
+        update('puertoCarga.id', '');
+        setAirportOptions(prev => ({ ...prev, carga: airports }));
+      } else if (scope === 'paisDestino') {
+        // Clear the airport field and populate options
+        update('puertoDescarga.nombre', '');
+        update('puertoDescarga.id', '');
+        setAirportOptions(prev => ({ ...prev, descarga: airports }));
+      }
+    } catch (error) {
+      console.error('Error loading airports for country:', error);
+    }
   };
 
   const addDetalle = () => {
-    setForm(prev => ({ ...prev, detalles: [...prev.detalles, { largo: '', ancho: '', alto: '', unidadMedida: 'cm', peso: '', unidadPeso: 'kg', tipoMercancia: 'general', isApilable: false }] }));
+    setForm(prev => ({ ...prev, detalles: [...prev.detalles, { largo: '', ancho: '', alto: '', unidadMedida: 'cm', peso: '', unidadPeso: 'kg', tipoMercancia: 'general', isApilable: 'Si', noPiezas: '' }] }));
   };
   const removeDetalle = (idx) => {
     setForm(prev => ({ ...prev, detalles: prev.detalles.filter((_, i) => i !== idx) }));
@@ -105,6 +187,8 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
         asesor: form.asesor,
         puertoCarga: form.puertoCarga,
         puertoDescarga: form.puertoDescarga,
+        paisOrigen: form.paisOrigen,
+        paisDestino: form.paisDestino,
         descripcion: form.descripcion,
         NoPiezas: Number(form.NoPiezas || 0) || 0,
         detalles: form.detalles.map(d => ({
@@ -115,7 +199,12 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
           peso: Number(d.peso || 0) || 0,
         })),
       };
-      await onSave(payload);
+      const result = await createAirRequest(payload);
+      if (result.success || result.code === 201) {
+        await onSave(result.data || payload);
+      } else {
+        throw new Error(result.message || 'Error al crear la solicitud aérea');
+      }
     } finally {
       setLoading(false);
     }
@@ -124,15 +213,15 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-lg shadow-lg w-full max-w-4xl">
-        <form onSubmit={handleSubmit}>
-          <div className="p-4 border-b flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-lg shadow-lg w-full max-w-6xl h-[85vh] flex flex-col relative z-10">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+          <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
             <h3 className="text-lg font-semibold">{title}</h3>
             <button type="button" onClick={onClose} className="p-2 rounded hover:bg-muted"><X size={18} /></button>
           </div>
-          <div className="p-4 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-3 space-y-3 overflow-y-auto flex-1 min-h-0 relative">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <Label>Tipo</Label>
                 <Select value={form.tipo} onValueChange={(v) => update('tipo', v)}>
@@ -154,7 +243,7 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <Label>Cliente (buscar por nombre/NIT)</Label>
                 <Input value={form.cliente.nombre} onChange={(e) => { update('cliente.nombre', e.target.value); onClienteSearch(e.target.value); }} placeholder="Cliente" />
@@ -184,28 +273,28 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <Label>Aeropuerto Origen (carga)</Label>
-                <Input value={form.puertoCarga.nombre} onChange={(e) => { update('puertoCarga.nombre', e.target.value); onPortSearch('carga', e.target.value); }} placeholder="Nombre/IATA/UNLOCODE" />
-                {suggestions.carga?.length > 0 && (
+                <Label>País de Origen</Label>
+                <Input value={form.paisOrigen} onChange={(e) => { update('paisOrigen', e.target.value); onCountrySearch('paisOrigen', e.target.value); }} placeholder="Escriba el país de origen" />
+                {suggestions.paisOrigen?.length > 0 && (
                   <div className="mt-1 border rounded max-h-40 overflow-auto bg-background">
-                    {suggestions.carga.map((p) => (
-                      <button type="button" key={p._id || p.id} className="w-full text-left px-2 py-1 hover:bg-muted" onClick={() => { setForm(prev => ({ ...prev, puertoCarga: { id: p._id || p.id, nombre: p.nombre, ciudad: p.ciudad, iata: p.iata, unlocode: p.unlocode, pais: p.pais } })); setSuggestions(s => ({ ...s, carga: [] })); }}>
-                        {p.nombre} {p.iata ? `(${p.iata})` : ''} {p.ciudad ? `- ${p.ciudad}` : ''}
+                    {suggestions.paisOrigen.map((country, index) => (
+                      <button type="button" key={index} className="w-full text-left px-2 py-1 hover:bg-muted" onClick={() => onCountrySelect('paisOrigen', country)}>
+                        {country}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
               <div>
-                <Label>Aeropuerto Destino (descarga)</Label>
-                <Input value={form.puertoDescarga.nombre} onChange={(e) => { update('puertoDescarga.nombre', e.target.value); onPortSearch('descarga', e.target.value); }} placeholder="Nombre/IATA/UNLOCODE" />
-                {suggestions.descarga?.length > 0 && (
+                <Label>País de Destino</Label>
+                <Input value={form.paisDestino} onChange={(e) => { update('paisDestino', e.target.value); onCountrySearch('paisDestino', e.target.value); }} placeholder="Escriba el país de destino" />
+                {suggestions.paisDestino?.length > 0 && (
                   <div className="mt-1 border rounded max-h-40 overflow-auto bg-background">
-                    {suggestions.descarga.map((p) => (
-                      <button type="button" key={p._id || p.id} className="w-full text-left px-2 py-1 hover:bg-muted" onClick={() => { setForm(prev => ({ ...prev, puertoDescarga: { id: p._id || p.id, nombre: p.nombre, ciudad: p.ciudad, iata: p.iata, unlocode: p.unlocode, pais: p.pais } })); setSuggestions(s => ({ ...s, descarga: [] })); }}>
-                        {p.nombre} {p.iata ? `(${p.iata})` : ''} {p.ciudad ? `- ${p.ciudad}` : ''}
+                    {suggestions.paisDestino.map((country, index) => (
+                      <button type="button" key={index} className="w-full text-left px-2 py-1 hover:bg-muted" onClick={() => onCountrySelect('paisDestino', country)}>
+                        {country}
                       </button>
                     ))}
                   </div>
@@ -213,27 +302,105 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label>Aeropuerto Origen (carga)</Label>
+                <Select value={form.puertoCarga.id} onValueChange={(v) => {
+                  const airport = airportOptions.carga.find(a => (a._id || a.id) === v);
+                  if (airport) {
+                    setForm(prev => ({ 
+                      ...prev, 
+                      puertoCarga: { 
+                        id: airport._id || airport.id, 
+                        nombre: airport.nombre, 
+                        ciudad: airport.ciudad, 
+                        iata: airport.iata, 
+                        unlocode: airport.unlocode, 
+                        pais: airport.pais 
+                      } 
+                    }));
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={form.paisOrigen ? "Selecciona aeropuerto" : "Primero selecciona un país"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {airportOptions.carga.map((airport) => (
+                      <SelectItem key={airport._id || airport.id} value={airport._id || airport.id}>
+                        {airport.nombre} {airport.iata ? `(${airport.iata})` : ''} {airport.ciudad ? `- ${airport.ciudad}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Aeropuerto Destino (descarga)</Label>
+                <Select value={form.puertoDescarga.id} onValueChange={(v) => {
+                  const airport = airportOptions.descarga.find(a => (a._id || a.id) === v);
+                  if (airport) {
+                    setForm(prev => ({ 
+                      ...prev, 
+                      puertoDescarga: { 
+                        id: airport._id || airport.id, 
+                        nombre: airport.nombre, 
+                        ciudad: airport.ciudad, 
+                        iata: airport.iata, 
+                        unlocode: airport.unlocode, 
+                        pais: airport.pais 
+                      } 
+                    }));
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={form.paisDestino ? "Selecciona aeropuerto" : "Primero selecciona un país"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {airportOptions.descarga.map((airport) => (
+                      <SelectItem key={airport._id || airport.id} value={airport._id || airport.id}>
+                        {airport.nombre} {airport.iata ? `(${airport.iata})` : ''} {airport.ciudad ? `- ${airport.ciudad}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <Label>Descripción</Label>
                 <Input value={form.descripcion} onChange={(e) => update('descripcion', e.target.value)} placeholder="Descripción corta" />
               </div>
               <div>
-                <Label>No. Piezas</Label>
+                <Label>No. Piezas Total</Label>
                 <Input type="number" inputMode="numeric" value={form.NoPiezas} onChange={(e) => update('NoPiezas', e.target.value)} />
               </div>
             </div>
 
-            <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label>Peso Total (kg)</Label>
+                <Input type="number" value={pesoTotal.toFixed(2)} readOnly className="bg-muted" />
+              </div>
+              <div>
+                <Label>Peso Volumétrico (kg)</Label>
+                <Input type="number" value={pesoVolumetrico.toFixed(2)} readOnly className="bg-muted" />
+              </div>
+            </div>
+
+            <div className="relative">
               <div className="flex items-center justify-between">
                 <Label>Detalles de paquetes</Label>
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" onClick={addDetalle}><Plus className="h-4 w-4 mr-1" /> Añadir</Button>
                 </div>
               </div>
-              <div className="mt-2 space-y-2">
+              <div className="mt-2 space-y-2 relative z-0">
                 {form.detalles.map((d, idx) => (
-                  <div key={idx} className="grid grid-cols-1 sm:grid-cols-8 gap-2 items-end">
+                  <div key={idx} className="grid grid-cols-1 sm:grid-cols-10 gap-1 items-end">
+                    <div>
+                      <Label>No. Piezas</Label>
+                      <Input type="number" inputMode="numeric" value={d.noPiezas} onChange={(e) => setDetalle(idx, 'noPiezas', e.target.value)} placeholder="0" />
+                    </div>
                     <div>
                       <Label>Largo</Label>
                       <Input type="number" value={d.largo} onChange={(e) => setDetalle(idx, 'largo', e.target.value)} />
@@ -253,6 +420,7 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
                         <SelectContent>
                           <SelectItem value="cm">cm</SelectItem>
                           <SelectItem value="m">m</SelectItem>
+                          <SelectItem value="in">in</SelectItem>
                           <SelectItem value="ft">ft</SelectItem>
                         </SelectContent>
                       </Select>
@@ -268,7 +436,8 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
                         <SelectContent>
                           <SelectItem value="kg">kg</SelectItem>
                           <SelectItem value="lb">lb</SelectItem>
-                          <SelectItem value="ton">ton</SelectItem>
+                          <SelectItem value="g">g</SelectItem>
+                          <SelectItem value="oz">oz</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -284,12 +453,20 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <input id={`apilable-${idx}`} type="checkbox" checked={!!d.isApilable} onChange={(e) => setDetalle(idx, 'isApilable', e.target.checked)} />
-                      <Label htmlFor={`apilable-${idx}`}>Apilable</Label>
+                    <div>
+                      <Label>Apilable</Label>
+                      <Select value={d.isApilable} onValueChange={(v) => setDetalle(idx, 'isApilable', v)}>
+                        <SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Si">Sí</SelectItem>
+                          <SelectItem value="No">No</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-end h-10">
                       {form.detalles.length > 1 && (
-                        <Button type="button" variant="ghost" className="text-red-600" onClick={() => removeDetalle(idx)}>
-                          <Minus className="h-4 w-4" />
+                        <Button type="button" variant="ghost" size="sm" className="text-red-600 hover:bg-red-50 h-8 w-8 p-0" onClick={() => removeDetalle(idx)}>
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
@@ -298,7 +475,7 @@ const AirOperationModal = ({ isOpen, onClose, onSave, title = 'Crear Solicitud A
               </div>
             </div>
           </div>
-          <div className="p-4 border-t flex items-center justify-end gap-2">
+          <div className="p-3 border-t flex items-center justify-end gap-2 flex-shrink-0">
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={loading}>
               {loading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando...</>) : 'Guardar'}
