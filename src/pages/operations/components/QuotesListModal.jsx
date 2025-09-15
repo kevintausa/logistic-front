@@ -71,11 +71,9 @@ const QuotesListModal = ({ isOpen, onClose, operation, onSelect }) => {
                 <thead>
                   <tr>
                     <HeaderCell>Proveedor</HeaderCell>
-                    <HeaderCell>Flete (USD)</HeaderCell>
-                    <HeaderCell>G. Origen (USD)</HeaderCell>
-                    <HeaderCell>G. Destino (USD)</HeaderCell>
-                    <HeaderCell>Otros (USD)</HeaderCell>
                     <HeaderCell>Total (USD)</HeaderCell>
+                    <HeaderCell>Vigencia</HeaderCell>
+                    <HeaderCell>Estado</HeaderCell>
                     <HeaderCell>Tránsito (días)</HeaderCell>
                     <HeaderCell>Ruta</HeaderCell>
                     <HeaderCell>Nota</HeaderCell>
@@ -85,6 +83,11 @@ const QuotesListModal = ({ isOpen, onClose, operation, onSelect }) => {
                 <tbody>
                   {rows.map((q) => {
                     const isSelected = (q?._id && q._id === selectedQuoteId) || (q?.id && q.id === selectedQuoteId);
+                    const vigenciaDate = q?.vigenciaHasta ? new Date(q.vigenciaHasta) : null;
+                    const today = new Date();
+                    // Normalizar para comparar solo fecha
+                    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+                    const isVencida = vigenciaDate ? vigenciaDate < endOfToday : false;
                     return (
                     <tr key={q._id} className={`hover:bg-blue-50/40 ${isSelected ? 'bg-green-50' : ''}`}>
                       <Cell>
@@ -92,11 +95,19 @@ const QuotesListModal = ({ isOpen, onClose, operation, onSelect }) => {
                           {q?.provider?.nombre || q.providerNombre || q.providerId}
                         </span>
                       </Cell>
-                      <Cell>{Number(q.fleteUsd || 0).toFixed(2)}</Cell>
-                      <Cell>{Number(q.gastosOrigenUsd || 0).toFixed(2)}</Cell>
-                      <Cell>{Number(q.gastosDestinoUsd || 0).toFixed(2)}</Cell>
-                      <Cell>{Number(q.otrosGastosUsd || 0).toFixed(2)}</Cell>
                       <Cell className="font-semibold text-blue-900">{Number(q.totalUsd || 0).toFixed(2)}</Cell>
+                      <Cell>{q.vigenciaHasta ? new Date(q.vigenciaHasta).toLocaleDateString('es-CO') : '-'}</Cell>
+                      <Cell>
+                        {vigenciaDate ? (
+                          isVencida ? (
+                            <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-semibold border border-red-200">Vencida</span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold border border-green-200">Vigente</span>
+                          )
+                        ) : (
+                          <span className="text-muted-foreground text-xs">-</span>
+                        )}
+                      </Cell>
                       <Cell>{q.ttatDias || '-'}</Cell>
                       <Cell className="max-w-[180px] truncate" title={q.ruta || ''}>{q.ruta || '-'}</Cell>
                       <Cell className="max-w-[220px] truncate" title={q.nota || ''}>{q.nota || '-'}</Cell>

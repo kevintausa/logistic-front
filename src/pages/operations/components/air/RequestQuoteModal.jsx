@@ -32,7 +32,6 @@ export default function RequestQuoteModal({ isOpen, onClose, operation }) {
     lines.push('Solicito la siguiente cotización:');
     lines.push('');
     if (op?.descripcion) lines.push(`Descripción: ${op.descripcion}`);
-    if (op?.cliente?.nombre) lines.push(`Cliente: ${op.cliente.nombre}`);
     if (op?.incoterm) lines.push(`Incoterm: ${op.incoterm}`);
     const origenStr = [op?.puertoCarga?.nombre, op?.puertoCarga?.ciudad, op?.puertoCarga?.pais].filter(Boolean).join(', ');
     const destinoStr = [op?.puertoDescarga?.nombre, op?.puertoDescarga?.ciudad, op?.puertoDescarga?.pais].filter(Boolean).join(', ');

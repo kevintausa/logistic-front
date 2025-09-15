@@ -1,7 +1,9 @@
 export const airOperationsColumns = [
   { id: 'actions', label: 'Acciones', type: 'actions', actions: [
     { key: 'view', label: 'Ver', icon: 'Eye', tooltip: 'Ver detalles', className: 'text-blue-600 hover:text-white hover:bg-blue-600' },
-    { key: 'requestQuote', label: 'Pedir Cotización', icon: 'Tag', tooltip: 'Solicitar cotización a proveedores', className: 'text-teal-600 hover:text-white hover:bg-teal-600' },
+    { key: 'requestQuote', label: 'Pedir Cotización', icon: 'Mail', tooltip: 'Solicitar cotización a proveedores', className: 'text-teal-600 hover:text-white hover:bg-teal-600' },
+    { key: 'registerQuote', label: 'Registrar Cotización', icon: 'FileText', tooltip: 'Registrar cotización del proveedor', className: 'text-amber-600 hover:text-white hover:bg-amber-600' },
+    { key: 'compareQuotes', label: 'Comparar/Seleccionar', icon: 'ListChecks', tooltip: 'Comparar y seleccionar cotización', className: 'text-purple-600 hover:text-white hover:bg-purple-600' },
   ] },
   { id: 'codigo', label: 'Código', accessor: (row) => row.codigo, sortable: true },
   { id: 'estado', label: 'Estado', accessor: (row) => row.estado, sortable: true },

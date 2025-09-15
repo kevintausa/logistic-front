@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, Edit, Trash, Check, AlertCircle, LogOut, FileText, Tag, ListChecks, Lock, Ban, Plus, Download } from 'lucide-react';
+import { Eye, Edit, Trash, Check, AlertCircle, LogOut, FileText, Tag, ListChecks, Lock, Ban, Plus, Download, Mail } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Pagination from './Pagination';
 import { Button } from '@/components/ui/button';
@@ -106,6 +106,7 @@ const DataTable = ({ data, columns, isLoading, onAction, page, limit, totalRecor
                           case 'LogOut': Icon = LogOut; break;
                           case 'FileText': Icon = FileText; break;
                           case 'Tag': Icon = Tag; break;
+                          case 'Mail': Icon = Mail; break;
                           case 'ListChecks': Icon = ListChecks; break;
                           case 'Lock': Icon = Lock; break;
                           case 'Ban': Icon = Ban; break;

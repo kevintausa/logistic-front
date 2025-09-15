@@ -8,8 +8,11 @@ import { ArrowLeft } from 'lucide-react';
 import AirOperationModal from '@/pages/operations/components/air/AirOperationModal';
 import AirOperationDetails from '@/pages/operations/components/air/AirOperationDetails';
 import RequestQuoteModal from '@/pages/operations/components/air/RequestQuoteModal';
+import RegisterQuoteModal from '@/pages/operations/components/air/RegisterQuoteModal';
+import QuotesListModal from '@/pages/operations/components/QuotesListModal';
 import { useToast } from '@/components/ui/use-toast';
 import { useState, useCallback } from 'react';
+import { selectOperationQuote } from '@/pages/operations/Services/operations.services.jsx';
 
 export default function AirOperationPage() {
   // Filtros disponibles (mínimos por ahora). Puedes extenderlos como en OperationsPage
@@ -24,6 +27,8 @@ export default function AirOperationPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isQuoteOpen, setIsQuoteOpen] = useState(false);
+  const [isRegisterQuoteOpen, setIsRegisterQuoteOpen] = useState(false);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState(null);
   const [selectedOperationId, setSelectedOperationId] = useState(null);
   // refresh tokens por sección
@@ -42,6 +47,13 @@ export default function AirOperationPage() {
     } else if (actionKey === 'requestQuote') {
       setSelectedOperation(row || null);
       setIsQuoteOpen(true);
+    } else if (actionKey === 'registerQuote') {
+      setSelectedOperation(row || null);
+      setIsRegisterQuoteOpen(true);
+    } else if (actionKey === 'compareQuotes') {
+      setSelectedOperation(row || null);
+      setSelectedOperationId(row?._id || null);
+      setIsCompareOpen(true);
     }
   }, []);
 
@@ -148,6 +160,33 @@ export default function AirOperationPage() {
         isOpen={isQuoteOpen}
         onClose={() => setIsQuoteOpen(false)}
         operation={selectedOperation}
+      />
+
+      <RegisterQuoteModal
+        isOpen={isRegisterQuoteOpen}
+        onClose={() => setIsRegisterQuoteOpen(false)}
+        operation={selectedOperation}
+        onSaved={() => {
+          toast({ title: 'Cotización registrada', description: 'La cotización del proveedor se guardó correctamente.' });
+          setRefreshInitial((n) => n + 1);
+        }}
+      />
+
+      <QuotesListModal
+        isOpen={isCompareOpen}
+        onClose={() => setIsCompareOpen(false)}
+        operation={selectedOperation}
+        onSelect={async (q) => {
+          try {
+            if (!selectedOperationId || !q?._id) return;
+            await selectOperationQuote(selectedOperationId, q._id);
+            toast({ title: 'Cotización seleccionada', description: 'Se seleccionó la cotización para la operación.' });
+            setIsCompareOpen(false);
+            setRefreshInitial((n) => n + 1);
+          } catch (e) {
+            toast({ title: 'Error', description: e?.message || 'No se pudo seleccionar la cotización', variant: 'destructive' });
+          }
+        }}
       />
     </div>
   );
